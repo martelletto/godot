@@ -177,6 +177,10 @@ func Digest(r io.Reader) []byte {
 }
 
 func DigestBytes(p []byte) []byte {
+	if len(p) > 2^61 -1 {
+		fmt.Fprintf(os.Stderr, "DigestBytes: message too long\n")
+		os.Exit(1)
+	}
 	return toByteSlice(hash(shaH, wrap(p, 0)))
 }
 
