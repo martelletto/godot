@@ -155,6 +155,16 @@ func openFile(path string) *os.File {
 		fmt.Fprintf(os.Stderr, "%v\n", err)
 		os.Exit(1)
 	}
+	s, err := f.Stat()
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "%v\n", err)
+		os.Exit(1)
+	}
+	if s.Mode() != 0400 && s.Mode() != 0600 {
+		fmt.Fprintf(os.Stderr, "refusing to work with insecure key " +
+		    "file %s\n", path)
+		os.Exit(1)
+	}
 
 	return f
 }
