@@ -179,3 +179,28 @@ func Digest(r io.Reader) []byte {
 func DigestBytes(p []byte) []byte {
 	return toByteSlice(hash(shaH, wrap(p, 0)))
 }
+
+// As per PKCS#1v2.2, B.2.1
+func MGF1(mgfSeed []byte, maskLen uint32) []byte {
+	if maskLen > 2^31*hLen {
+		fmt.Fprintf(os.Stderr, "MGF1: mask too long\n")
+		os.Exit(1)
+	}
+
+	n := int(math.Ceil(float64(maskLen)/float64(hLen)))
+	var t bytes.Buffer
+	t.Grow(int(n * hLen))
+
+	for i := 0; i < n; i++ {
+		var seed = bytes.NewBuffer(mgfSeed)
+		seed.Grow(4)
+		err := binary.Write(seed, binary.BigEndian, n)
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "%v\n", err)
+			os.Exit(1)
+		}
+		t.Write(DigestBytes(seed.Bytes()))
+	}
+
+	return t.Bytes()
+}
