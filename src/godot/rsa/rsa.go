@@ -209,6 +209,19 @@ func buildX509(rsa *PKCS1_RSAPrivateKey) *X509_RSA_PUBKEY {
 	return x509
 }
 
+func Sign(args []string) {
+	var s big.Int
+
+	if len(args) != 2 || args[0] != "--key"  {
+		usage.Print();
+		os.Exit(1);
+	}
+	rsa := parseRSA(openFile(args[1]))
+
+	m := pssEncode(os.Stdin, 4095)
+	os.Stdout.Write(s.Exp(m, rsa.PrivateExponent, rsa.Modulus).Bytes())
+}
+
 func Pub(args []string) {
 	var in *os.File = os.Stdin
 

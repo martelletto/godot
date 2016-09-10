@@ -21,6 +21,8 @@ func main() {
 		rsa.New(args)
 	case "pub":
 		rsa.Pub(args)
+	case "sign":
+		rsa.Sign(args)
 	default:
 		usage.Print();
 		os.Exit(1)

@@ -6,7 +6,6 @@ import (
 	"encoding/binary"
 	"fmt"
 	"io"
-	"math"
 	"os"
 )
 
@@ -14,7 +13,7 @@ const (
 	chunkLen = 1 << 13  // how much we try to read from stdin in one loop
 	maxRounds = 1 << 48 // maximum number of times we will loop
 	padLen = 72         // space reserved for padding of the last message
-	hLen = 32           // length of a SHA-256 digest in bytes
+	Len = 32            // length of a SHA-256 digest in bytes
 )
 
 var shaK = [64]uint32 {
@@ -139,7 +138,7 @@ func wrap(chunk []byte, totalRounds int) []byte {
 func toByteSlice(h [8]uint32) []byte {
 	var r bytes.Buffer
 
-	r.Grow(hLen)
+	r.Grow(Len)
 	err := binary.Write(&r, binary.BigEndian, h)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "%v\n", err)
@@ -149,7 +148,7 @@ func toByteSlice(h [8]uint32) []byte {
 	return r.Bytes()
 }
 
-func Digest(r io.Reader) []byte {
+func DigestAll(r io.Reader) []byte {
 	var chunk = make([]byte, chunkLen)
 	var h = shaH
 	var i int
@@ -177,34 +176,9 @@ func Digest(r io.Reader) []byte {
 }
 
 func DigestBytes(p []byte) []byte {
-	if len(p) > 2^61 -1 {
+	if len(p) > (1 << 63) - 1 {
 		fmt.Fprintf(os.Stderr, "DigestBytes: message too long\n")
 		os.Exit(1)
 	}
 	return toByteSlice(hash(shaH, wrap(p, 0)))
-}
-
-// As per PKCS#1v2.2, B.2.1
-func MGF1(mgfSeed []byte, maskLen uint32) []byte {
-	if maskLen > 2^31*hLen {
-		fmt.Fprintf(os.Stderr, "MGF1: mask too long\n")
-		os.Exit(1)
-	}
-
-	n := int(math.Ceil(float64(maskLen)/float64(hLen)))
-	var t bytes.Buffer
-	t.Grow(int(n * hLen))
-
-	for i := 0; i < n; i++ {
-		var seed = bytes.NewBuffer(mgfSeed)
-		seed.Grow(4)
-		err := binary.Write(seed, binary.BigEndian, n)
-		if err != nil {
-			fmt.Fprintf(os.Stderr, "%v\n", err)
-			os.Exit(1)
-		}
-		t.Write(DigestBytes(seed.Bytes()))
-	}
-
-	return t.Bytes()
 }
