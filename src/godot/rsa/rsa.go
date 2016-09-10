@@ -210,16 +210,21 @@ func buildX509(rsa *PKCS1_RSAPrivateKey) *X509_RSA_PUBKEY {
 }
 
 func Sign(args []string) {
-	var s big.Int
-
 	if len(args) != 2 || args[0] != "--key"  {
 		usage.Print();
 		os.Exit(1);
 	}
+
 	rsa := parseRSA(openFile(args[1]))
+	if len(rsa.Modulus.Bytes()) != 512 ||
+	   len(rsa.PrivateExponent.Bytes()) != 512 {
+		fmt.Fprintf(os.Stderr, "%s: invalid key size\n", args[1])
+		os.Exit(1)
+	}
 
 	m := pssEncode(os.Stdin, 4095)
-	os.Stdout.Write(s.Exp(m, rsa.PrivateExponent, rsa.Modulus).Bytes())
+	os.Stdout.Write(new(big.Int).Exp(m, rsa.PrivateExponent,
+	    rsa.Modulus).Bytes())
 }
 
 func Pub(args []string) {
