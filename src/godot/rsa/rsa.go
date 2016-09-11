@@ -25,18 +25,6 @@ type PKCS1_RSAPrivateKey struct {
 	Coefficient	*big.Int
 }
 
-// Internal representation of an RSA key pair.
-type PrivateKey struct {
-	n		 big.Int // modulus (pq)
-	e		*big.Int // public exponent
-	d		 big.Int // private exponent
-	p		*big.Int // prime p
-	q		*big.Int // prime q
-	pMinus		 big.Int // p - 1
-	qMinus		 big.Int // q - 1
-	phi		 big.Int // (p - 1)*(q -1)
-}
-
 // As per https://www.ietf.org/rfc/rfc3447.txt, A.1.1
 type PKCS1_RSAPublicKey struct {
 	Modulus		*big.Int
@@ -55,18 +43,24 @@ type X509_RSA_PUBKEY struct {
 	Body		asn1.BitString
 }
 
-func generateRSA(l int) *PrivateKey {
-	var one = big.NewInt(1)
-	var rsa = new(PrivateKey)
+func generateRSA(l int) *PKCS1_RSAPrivateKey {
+	var rsa = new(PKCS1_RSAPrivateKey)
 
-	rsa.p = rand.Prime(l/2)
-	rsa.q = rand.Prime(l/2)
-	rsa.n.Mul(rsa.p, rsa.q)
-	rsa.e = big.NewInt(65537)
-	rsa.pMinus.Sub(rsa.p, one)
-	rsa.qMinus.Sub(rsa.q, one)
-	rsa.phi.Mul(&rsa.pMinus, &rsa.qMinus)
-	rsa.d.ModInverse(rsa.e, &rsa.phi)
+	rsa.Version = big.NewInt(0)
+	rsa.Prime1 = rand.Prime(l/2) // prime p
+	rsa.Prime2 = rand.Prime(l/2) // prime q
+	rsa.Modulus = new(big.Int).Mul(rsa.Prime1, rsa.Prime2)
+	rsa.PublicExponent = big.NewInt(65537)
+
+	pMinus := new(big.Int).Sub(rsa.Prime1, big.NewInt(1))
+	qMinus := new(big.Int).Sub(rsa.Prime1, big.NewInt(1))
+	phi := new(big.Int).Mul(pMinus, qMinus)
+
+	rsa.PrivateExponent = new(big.Int).ModInverse(rsa.PublicExponent, phi)
+	// CRT auxiliary parameters
+	rsa.Exponent1 = new(big.Int).Mod(rsa.PrivateExponent, pMinus)
+	rsa.Exponent2 = new(big.Int).Mod(rsa.PrivateExponent, qMinus)
+	rsa.Coefficient = new(big.Int).ModInverse(rsa.Prime2, rsa.Prime1)
 
 	return rsa
 }
@@ -95,27 +89,6 @@ func parseRSA(in *os.File) *PKCS1_RSAPrivateKey {
 	}
 
 	return rsa
-}
-
-func buildPKCS1(rsa *PrivateKey) *PKCS1_RSAPrivateKey {
-	var pkcs1 = new(PKCS1_RSAPrivateKey)
-	var e1, e2, c big.Int
-
-	pkcs1.Version = big.NewInt(0)
-	pkcs1.Modulus = &rsa.n
-	pkcs1.PublicExponent = rsa.e
-	pkcs1.PrivateExponent = &rsa.d
-	pkcs1.Prime1 = rsa.p
-	pkcs1.Prime2 = rsa.q
-	// CRT auxiliary parameters
-	e1.Mod(&rsa.d, &rsa.pMinus)
-	e2.Mod(&rsa.d, &rsa.qMinus)
-	c.ModInverse(rsa.q, rsa.p)
-	pkcs1.Exponent1 = &e1
-	pkcs1.Exponent2 = &e2
-	pkcs1.Coefficient = &c
-
-	return pkcs1
 }
 
 func buildPrivatePEM(pkcs1 *PKCS1_RSAPrivateKey) *pem.Block {
@@ -408,7 +381,7 @@ func New(args []string) {
 		out = os.Stdout
 	}
 
-	writePEM(buildPrivatePEM(buildPKCS1(generateRSA(4096))), out)
+	writePEM(buildPrivatePEM(generateRSA(4096)), out)
 
 	closeFile(out)
 }
