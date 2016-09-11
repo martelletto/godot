@@ -5,6 +5,7 @@ import (
 	"encoding/pem"
 	"fmt"
 	"godot/util"
+	"io/ioutil"
 	"math/big"
 	"os"
 )
@@ -40,4 +41,30 @@ func WriteRSA(rsa *RSAPrivateKey, f *os.File) {
 	}
 
 	util.WritePEM(blob, f)
+}
+
+func ReadRSA(in *os.File) *RSAPrivateKey {
+	var rsa = new (RSAPrivateKey)
+
+	body, err := ioutil.ReadAll(in)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "%v\n", err)
+		os.Exit(1)
+	}
+	blob, _ := pem.Decode(body)
+	if blob == nil {
+		fmt.Fprintf(os.Stderr, "%v\n", err)
+		os.Exit(1)
+	}
+	if blob.Type != "RSA PRIVATE KEY" || blob.Bytes == nil {
+		fmt.Fprintf(os.Stderr, "%v\n", err)
+		os.Exit(1)
+	}
+	_, err = asn1.Unmarshal(blob.Bytes, rsa)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "%v\n", err)
+		os.Exit(1)
+	}
+
+	return rsa
 }

@@ -2,29 +2,15 @@ package rsa
 
 import (
 	"fmt"
-	"encoding/asn1"
-	"encoding/pem"
 	"godot/pkcs1"
 	"godot/rand"
 	"godot/rsa/pss"
 	"godot/usage"
 	"godot/util"
-	"io/ioutil"
+	"godot/x509"
 	"math/big"
 	"os"
 )
-
-// As per https://tools.ietf.org/rfc/rfc3279.txt, 2.3.1
-type X509_OID struct {
-	OID		asn1.ObjectIdentifier
-	NULL		asn1.RawValue
-}
-
-// As per https://tools.ietf.org/rfc/rfc3279.txt, 2.3.1
-type X509_RSA_PUBKEY struct {
-	Type		X509_OID
-	Body		asn1.BitString
-}
 
 func createRSA(l int) *pkcs1.RSAPrivateKey {
 	var rsa = new(pkcs1.RSAPrivateKey)
@@ -46,108 +32,6 @@ func createRSA(l int) *pkcs1.RSAPrivateKey {
 	rsa.Coefficient = new(big.Int).ModInverse(rsa.Prime2, rsa.Prime1)
 
 	return rsa
-}
-
-func parseRSA(in *os.File) *pkcs1.RSAPrivateKey {
-	var rsa = new (pkcs1.RSAPrivateKey)
-
-	body, err := ioutil.ReadAll(in)
-	if err != nil {
-		fmt.Fprintf(os.Stderr, "%v\n", err)
-		os.Exit(1)
-	}
-	blob, _ := pem.Decode(body)
-	if blob == nil {
-		fmt.Fprintf(os.Stderr, "%v\n", err)
-		os.Exit(1)
-	}
-	if blob.Type != "RSA PRIVATE KEY" || blob.Bytes == nil {
-		fmt.Fprintf(os.Stderr, "%v\n", err)
-		os.Exit(1)
-	}
-	_, err = asn1.Unmarshal(blob.Bytes, rsa)
-	if err != nil {
-		fmt.Fprintf(os.Stderr, "%v\n", err)
-		os.Exit(1)
-	}
-
-	return rsa
-}
-
-func buildPublicPEM(x509 *X509_RSA_PUBKEY) *pem.Block {
-	var blob = new(pem.Block)
-	var err error
-
-	blob.Type = "PUBLIC KEY"
-	blob.Bytes, err = asn1.Marshal(*x509)
-	if err != nil {
-		fmt.Fprintf(os.Stderr, "%v\n", err)
-		os.Exit(1)
-	}
-
-	return blob
-}
-
-func buildX509(rsa *pkcs1.RSAPrivateKey) *X509_RSA_PUBKEY {
-	var x509 = new(X509_RSA_PUBKEY)
-	var rsaPub = new(pkcs1.RSAPublicKey)
-	var err error
-
-	x509.Type.OID = []int{1, 2, 840, 113549, 1, 1, 1} // rsaEncryption
-	x509.Type.NULL.Tag = 5 // NULL tag
-	rsaPub.Modulus = rsa.Modulus
-	rsaPub.PublicExponent = rsa.PublicExponent
-	x509.Body.Bytes, err = asn1.Marshal(*rsaPub)
-	if err != nil {
-		fmt.Fprintf(os.Stderr, "%v\n", err)
-		os.Exit(1)
-	}
-
-	return x509
-}
-
-func readX509(in *os.File) *X509_RSA_PUBKEY {
-	var x509 = new(X509_RSA_PUBKEY)
-
-	body, err := ioutil.ReadAll(in)
-	if err != nil {
-		fmt.Fprintf(os.Stderr, "%v\n", err)
-		os.Exit(1)
-	}
-	blob, _ := pem.Decode(body)
-	if blob == nil {
-		fmt.Fprintf(os.Stderr, "%v\n", err)
-		os.Exit(1)
-	}
-	if blob.Type != "PUBLIC KEY" || blob.Bytes == nil {
-		fmt.Fprintf(os.Stderr, "%v\n", err)
-		os.Exit(1)
-	}
-	_, err = asn1.Unmarshal(blob.Bytes, x509)
-	if err != nil {
-		fmt.Fprintf(os.Stderr, "%v\n", err)
-		os.Exit(1)
-	}
-
-	return x509
-}
-
-func parseX509(x509 *X509_RSA_PUBKEY) *pkcs1.RSAPublicKey {
-	var rsaPub = new(pkcs1.RSAPublicKey)
-
-//	if x509.Type.OID != []int{1, 2, 840, 113549, 1, 1, 1} ||
-//	   x509.Type.NULL.Tag != 5 {
-//		fmt.Fprintf(os.Stderr, "invalid x509\n");
-//		os.Exit(1);
-//	}
-
-	_, err := asn1.Unmarshal(x509.Body.Bytes, rsaPub)
-	if err != nil {
-		fmt.Fprintf(os.Stderr, "%v\n", err)
-		os.Exit(1)
-	}
-
-	return rsaPub
 }
 
 // getArg() retrieves a token from 'args' at index i + 1. The token must exist.
@@ -187,11 +71,6 @@ func Verify(args []string) {
 	if in == nil {
 		in = os.Stdin
 	}
-
-	rsa := parseX509(readX509(key))
-
-	fmt.Println(rsa.Modulus)
-	fmt.Println(rsa.PublicExponent)
 }
 
 func Sign(args []string) {
@@ -228,7 +107,7 @@ func Sign(args []string) {
 		out = os.Stdout
 	}
 
-	rsa := parseRSA(key)
+	rsa := pkcs1.ReadRSA(key)
 	if len(rsa.Modulus.Bytes()) != 512 ||
 	   len(rsa.PrivateExponent.Bytes()) != 512 {
 		fmt.Fprintf(os.Stderr, "%s: invalid key size\n", args[1])
@@ -268,7 +147,7 @@ func Pub(args []string) {
 		out = os.Stdout
 	}
 
-	util.WritePEM(buildPublicPEM(buildX509(parseRSA(in))), out)
+	x509.WriteRSA(pkcs1.ReadRSA(in), out)
 	util.CloseFile(in);
 	util.CloseFile(out);
 }
