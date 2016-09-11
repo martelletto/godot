@@ -74,20 +74,6 @@ func parseRSA(in *os.File) *pkcs1.RSAPrivateKey {
 	return rsa
 }
 
-func buildPrivatePEM(pkcs1 *pkcs1.RSAPrivateKey) *pem.Block {
-	var blob = new(pem.Block)
-	var err error
-
-	blob.Type = "RSA PRIVATE KEY"
-	blob.Bytes, err = asn1.Marshal(*pkcs1)
-	if err != nil {
-		fmt.Fprintf(os.Stderr, "asn1 encoding: %v\n", err)
-		os.Exit(1)
-	}
-
-	return blob
-}
-
 func buildPublicPEM(x509 *X509_RSA_PUBKEY) *pem.Block {
 	var blob = new(pem.Block)
 	var err error
@@ -306,7 +292,6 @@ func New(args []string) {
 		out = os.Stdout
 	}
 
-	util.WritePEM(buildPrivatePEM(createRSA(4096)), out)
-
+	pkcs1.WriteRSA(createRSA(4096), out)
 	util.CloseFile(out)
 }

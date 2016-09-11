@@ -1,7 +1,12 @@
 package pkcs1
 
 import (
+	"encoding/asn1"
+	"encoding/pem"
+	"fmt"
+	"godot/util"
 	"math/big"
+	"os"
 )
 
 // As per https://www.ietf.org/rfc/rfc3447.txt, A.1.2
@@ -21,4 +26,18 @@ type RSAPrivateKey struct {
 type RSAPublicKey struct {
 	Modulus		*big.Int
 	PublicExponent	*big.Int
+}
+
+func WriteRSA(rsa *RSAPrivateKey, f *os.File) {
+	var blob = new(pem.Block)
+	var err error
+
+	blob.Type = "RSA PRIVATE KEY"
+	blob.Bytes,err = asn1.Marshal(*rsa)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "%v\n", err)
+		os.Exit(1)
+	}
+
+	util.WritePEM(blob, f)
 }
