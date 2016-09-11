@@ -224,6 +224,50 @@ func buildX509(rsa *PKCS1_RSAPrivateKey) *X509_RSA_PUBKEY {
 	return x509
 }
 
+func readX509(in *os.File) *X509_RSA_PUBKEY {
+	var x509 = new(X509_RSA_PUBKEY)
+
+	body, err := ioutil.ReadAll(in)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "%v\n", err)
+		os.Exit(1)
+	}
+	blob, _ := pem.Decode(body)
+	if blob == nil {
+		fmt.Fprintf(os.Stderr, "%v\n", err)
+		os.Exit(1)
+	}
+	if blob.Type != "PUBLIC KEY" || blob.Bytes == nil {
+		fmt.Fprintf(os.Stderr, "%v\n", err)
+		os.Exit(1)
+	}
+	_, err = asn1.Unmarshal(blob.Bytes, x509)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "%v\n", err)
+		os.Exit(1)
+	}
+
+	return x509
+}
+
+func parseX509(x509 *X509_RSA_PUBKEY) *PKCS1_RSAPublicKey {
+	var rsaPub = new(PKCS1_RSAPublicKey)
+
+//	if x509.Type.OID != []int{1, 2, 840, 113549, 1, 1, 1} ||
+//	   x509.Type.NULL.Tag != 5 {
+//		fmt.Fprintf(os.Stderr, "invalid x509\n");
+//		os.Exit(1);
+//	}
+
+	_, err := asn1.Unmarshal(x509.Body.Bytes, rsaPub)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "%v\n", err)
+		os.Exit(1)
+	}
+
+	return rsaPub
+}
+
 // getArg() retrieves a token from 'args' at index i + 1. The token must exist.
 func getArg(args []string, i *int) string {
 	if *i + 1 >= len(args) {
@@ -233,6 +277,39 @@ func getArg(args []string, i *int) string {
 	*i++;
 
 	return args[*i]
+}
+
+func Verify(args []string) {
+	var in, key *os.File
+
+	for i := 0; i < len(args); i++ {
+		switch args[i] {
+		case "-i":
+			fallthrough
+		case "--in":
+			openFile(&in, getArg(args, &i))
+		case "-k":
+			fallthrough
+		case "--key":
+			openFile(&key, getArg(args, &i))
+		default:
+			usage.Print();
+			os.Exit(1);
+		}
+	}
+
+	if key == nil {
+		usage.Print();
+		os.Exit(1);
+	}
+	if in == nil {
+		in = os.Stdin
+	}
+
+	rsa := parseX509(readX509(key))
+
+	fmt.Println(rsa.Modulus)
+	fmt.Println(rsa.PublicExponent)
 }
 
 func Sign(args []string) {

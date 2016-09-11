@@ -23,6 +23,8 @@ func main() {
 		rsa.Pub(args)
 	case "sign":
 		rsa.Sign(args)
+	case "verify":
+		rsa.Verify(args)
 	default:
 		usage.Print();
 		os.Exit(1)

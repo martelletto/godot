@@ -15,4 +15,5 @@ func Print() {
 	toStderr("       %s rsa new [--out <privkey>]", os.Args[0])
 	toStderr("       %s rsa pub [--in <privkey>] [--out <pubkey>]", os.Args[0])
 	toStderr("       %s rsa sign --key <privkey> [--in <file>] [--out <sig>]", os.Args[0])
+	toStderr("       %s rsa verify --key <pubkey> [--in <file>]", os.Args[0])
 }
