@@ -7,6 +7,7 @@ import (
 	"godot/rand"
 	"godot/rsa/pss"
 	"godot/usage"
+	"godot/util"
 	"io/ioutil"
 	"math/big"
 	"os"
@@ -108,59 +109,7 @@ func buildPrivatePEM(pkcs1 *PKCS1_RSAPrivateKey) *pem.Block {
 func writePEM(blob *pem.Block, f *os.File) {
 	err := pem.Encode(f, blob)
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "PEM output: %v\n", blob)
-		os.Exit(1)
-	}
-}
-
-func createFile(f **os.File, path string) {
-	var err error
-
-	if *f != nil {
-		// directives specifying files must be used at most once
-		usage.Print();
-		os.Exit(1);
-	}
-	*f, err = os.OpenFile(path, os.O_WRONLY | os.O_CREATE | os.O_EXCL, 0600)
-	if err != nil {
-		fmt.Fprintf(os.Stderr, "%v\n", err)
-		os.Exit(1)
-	}
-}
-
-func openFile(f **os.File, path string) {
-	var err error
-
-	if *f != nil {
-		// directives specifying files must be used at most once
-		usage.Print();
-		os.Exit(1);
-	}
-	*f, err = os.Open(path)
-	if err != nil {
-		fmt.Fprintf(os.Stderr, "%v\n", err)
-		os.Exit(1)
-	}
-}
-
-func openKey(f **os.File, path string) {
-	openFile(f, path);
-	s, err := f.Stat()
-	if err != nil {
-		fmt.Fprintf(os.Stderr, "%v\n", err)
-		os.Exit(1)
-	}
-	if s.Mode() != 0400 && s.Mode() != 0600 {
-		fmt.Fprintf(os.Stderr, "refusing to work with insecure key " +
-		    "file %s\n", path)
-		os.Exit(1)
-	}
-}
-
-func closeFile(f *os.File) {
-	err := f.Close()
-	if err != nil {
-		fmt.Fprintf(os.Stderr, "%v\n", err)
+		fmt.Fprintf(os.Stderr, "%v\n", blob)
 		os.Exit(1)
 	}
 }
@@ -260,11 +209,11 @@ func Verify(args []string) {
 		case "-i":
 			fallthrough
 		case "--in":
-			openFile(&in, getArg(args, &i))
+			util.OpenFile(&in, getArg(args, &i))
 		case "-k":
 			fallthrough
 		case "--key":
-			openFile(&key, getArg(args, &i))
+			util.OpenFile(&key, getArg(args, &i))
 		default:
 			usage.Print();
 			os.Exit(1);
@@ -293,15 +242,15 @@ func Sign(args []string) {
 		case "-i":
 			fallthrough
 		case "--in":
-			openFile(&in, getArg(args, &i))
+			util.OpenFile(&in, getArg(args, &i))
 		case "-k":
 			fallthrough
 		case "--key":
-			openKey(&key, getArg(args, &i))
+			util.OpenKey(&key, getArg(args, &i))
 		case "-o":
 			fallthrough
 		case "--out":
-			createFile(&out, getArg(args, &i))
+			util.CreateFile(&out, getArg(args, &i))
 		default:
 			usage.Print();
 			os.Exit(1);
@@ -328,6 +277,9 @@ func Sign(args []string) {
 
 	m := pss.Encode(in, 4095)
 	out.Write(new(big.Int).Exp(m, rsa.PrivateExponent, rsa.Modulus).Bytes())
+
+	util.CloseFile(in)
+	util.CloseFile(out)
 }
 
 func Pub(args []string) {
@@ -338,11 +290,11 @@ func Pub(args []string) {
 		case "-i":
 			fallthrough
 		case "--in":
-			openKey(&in, getArg(args, &i))
+			util.OpenKey(&in, getArg(args, &i))
 		case "-o":
 			fallthrough
 		case "--out":
-			createFile(&out, getArg(args, &i))
+			util.CreateFile(&out, getArg(args, &i))
 		default:
 			usage.Print();
 			os.Exit(1);
@@ -358,8 +310,8 @@ func Pub(args []string) {
 
 	writePEM(buildPublicPEM(buildX509(parseRSA(in))), out)
 
-	closeFile(in);
-	closeFile(out);
+	util.CloseFile(in);
+	util.CloseFile(out);
 }
 
 func New(args []string) {
@@ -370,7 +322,7 @@ func New(args []string) {
 		case "-o":
 			fallthrough
 		case "--out":
-			createFile(&out, getArg(args, &i))
+			util.CreateFile(&out, getArg(args, &i))
 		default:
 			usage.Print();
 			os.Exit(1);
@@ -383,5 +335,5 @@ func New(args []string) {
 
 	writePEM(buildPrivatePEM(generateRSA(4096)), out)
 
-	closeFile(out)
+	util.CloseFile(out)
 }
