@@ -1,4 +1,4 @@
-package rsa
+package pss
 
 import (
 	"bytes"
@@ -74,8 +74,8 @@ func makeEM(maskedDB *big.Int, h []byte) *big.Int {
 	return byte2big(append(append(big2byte(maskedDB), h...), 0xbc))
 }
 
-// pssEncode() implements the EMSA-PSS encoding operation.
-func pssEncode(in io.Reader, emBits uint32) *big.Int {
+// Encode() implements the EMSA-PSS encoding operation.
+func Encode(in io.Reader, emBits uint32) *big.Int {
 	emLen := intCeil(emBits, 8)
 	if emLen < sha256.Len + saltLen + 2 {
 		fmt.Fprintf(os.Stderr, "encoding error\n")

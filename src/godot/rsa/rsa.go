@@ -5,6 +5,7 @@ import (
 	"encoding/asn1"
 	"encoding/pem"
 	"godot/rand"
+	"godot/rsa/pss"
 	"godot/usage"
 	"io/ioutil"
 	"math/big"
@@ -222,7 +223,7 @@ func Sign(args []string) {
 		os.Exit(1)
 	}
 
-	m := pssEncode(os.Stdin, 4095)
+	m := pss.Encode(os.Stdin, 4095)
 	os.Stdout.Write(new(big.Int).Exp(m, rsa.PrivateExponent,
 	    rsa.Modulus).Bytes())
 }
