@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"encoding/asn1"
 	"encoding/pem"
+	"godot/pkcs1"
 	"godot/rand"
 	"godot/rsa/pss"
 	"godot/usage"
@@ -12,25 +13,6 @@ import (
 	"math/big"
 	"os"
 )
-
-// As per https://www.ietf.org/rfc/rfc3447.txt, A.1.2
-type PKCS1_RSAPrivateKey struct {
-	Version		*big.Int
-	Modulus		*big.Int
-	PublicExponent	*big.Int
-	PrivateExponent	*big.Int
-	Prime1		*big.Int
-	Prime2		*big.Int
-	Exponent1	*big.Int
-	Exponent2	*big.Int
-	Coefficient	*big.Int
-}
-
-// As per https://www.ietf.org/rfc/rfc3447.txt, A.1.1
-type PKCS1_RSAPublicKey struct {
-	Modulus		*big.Int
-	PublicExponent	*big.Int
-}
 
 // As per https://tools.ietf.org/rfc/rfc3279.txt, 2.3.1
 type X509_OID struct {
@@ -44,8 +26,8 @@ type X509_RSA_PUBKEY struct {
 	Body		asn1.BitString
 }
 
-func generateRSA(l int) *PKCS1_RSAPrivateKey {
-	var rsa = new(PKCS1_RSAPrivateKey)
+func createRSA(l int) *pkcs1.RSAPrivateKey {
+	var rsa = new(pkcs1.RSAPrivateKey)
 
 	rsa.Version = big.NewInt(0)
 	rsa.Prime1 = rand.Prime(l/2) // prime p
@@ -66,8 +48,8 @@ func generateRSA(l int) *PKCS1_RSAPrivateKey {
 	return rsa
 }
 
-func parseRSA(in *os.File) *PKCS1_RSAPrivateKey {
-	var rsa = new (PKCS1_RSAPrivateKey)
+func parseRSA(in *os.File) *pkcs1.RSAPrivateKey {
+	var rsa = new (pkcs1.RSAPrivateKey)
 
 	body, err := ioutil.ReadAll(in)
 	if err != nil {
@@ -92,7 +74,7 @@ func parseRSA(in *os.File) *PKCS1_RSAPrivateKey {
 	return rsa
 }
 
-func buildPrivatePEM(pkcs1 *PKCS1_RSAPrivateKey) *pem.Block {
+func buildPrivatePEM(pkcs1 *pkcs1.RSAPrivateKey) *pem.Block {
 	var blob = new(pem.Block)
 	var err error
 
@@ -128,9 +110,9 @@ func buildPublicPEM(x509 *X509_RSA_PUBKEY) *pem.Block {
 	return blob
 }
 
-func buildX509(rsa *PKCS1_RSAPrivateKey) *X509_RSA_PUBKEY {
+func buildX509(rsa *pkcs1.RSAPrivateKey) *X509_RSA_PUBKEY {
 	var x509 = new(X509_RSA_PUBKEY)
-	var rsaPub = new(PKCS1_RSAPublicKey)
+	var rsaPub = new(pkcs1.RSAPublicKey)
 	var err error
 
 	x509.Type.OID = []int{1, 2, 840, 113549, 1, 1, 1} // rsaEncryption
@@ -172,8 +154,8 @@ func readX509(in *os.File) *X509_RSA_PUBKEY {
 	return x509
 }
 
-func parseX509(x509 *X509_RSA_PUBKEY) *PKCS1_RSAPublicKey {
-	var rsaPub = new(PKCS1_RSAPublicKey)
+func parseX509(x509 *X509_RSA_PUBKEY) *pkcs1.RSAPublicKey {
+	var rsaPub = new(pkcs1.RSAPublicKey)
 
 //	if x509.Type.OID != []int{1, 2, 840, 113549, 1, 1, 1} ||
 //	   x509.Type.NULL.Tag != 5 {
@@ -333,7 +315,7 @@ func New(args []string) {
 		out = os.Stdout
 	}
 
-	writePEM(buildPrivatePEM(generateRSA(4096)), out)
+	writePEM(buildPrivatePEM(createRSA(4096)), out)
 
 	util.CloseFile(out)
 }
