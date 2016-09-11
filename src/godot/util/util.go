@@ -2,6 +2,7 @@ package util
 
 import (
 	"fmt"
+	"encoding/pem"
 	"godot/usage"
 	"os"
 )
@@ -71,4 +72,12 @@ func GetArg(args []string, i *int) string {
 	*i++;
 
 	return args[*i]
+}
+
+func WritePEM(blob *pem.Block, f *os.File) {
+	err := pem.Encode(f, blob)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "%v\n", blob)
+		os.Exit(1)
+	}
 }

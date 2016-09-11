@@ -88,14 +88,6 @@ func buildPrivatePEM(pkcs1 *pkcs1.RSAPrivateKey) *pem.Block {
 	return blob
 }
 
-func writePEM(blob *pem.Block, f *os.File) {
-	err := pem.Encode(f, blob)
-	if err != nil {
-		fmt.Fprintf(os.Stderr, "%v\n", blob)
-		os.Exit(1)
-	}
-}
-
 func buildPublicPEM(x509 *X509_RSA_PUBKEY) *pem.Block {
 	var blob = new(pem.Block)
 	var err error
@@ -290,8 +282,7 @@ func Pub(args []string) {
 		out = os.Stdout
 	}
 
-	writePEM(buildPublicPEM(buildX509(parseRSA(in))), out)
-
+	util.WritePEM(buildPublicPEM(buildX509(parseRSA(in))), out)
 	util.CloseFile(in);
 	util.CloseFile(out);
 }
@@ -315,7 +306,7 @@ func New(args []string) {
 		out = os.Stdout
 	}
 
-	writePEM(buildPrivatePEM(createRSA(4096)), out)
+	util.WritePEM(buildPrivatePEM(createRSA(4096)), out)
 
 	util.CloseFile(out)
 }
