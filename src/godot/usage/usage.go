@@ -12,7 +12,7 @@ func toStderr(format string, args ...interface{}) {
 
 func Print() {
 	toStderr("usage: %s rsa", os.Args[0])
-	toStderr("       %s rsa new [--out <key>]", os.Args[0])
-	toStderr("       %s rsa pub --key <key>", os.Args[0])
-	toStderr("       %s rsa sign --key <key>", os.Args[0])
+	toStderr("       %s rsa new [--out <privkey>]", os.Args[0])
+	toStderr("       %s rsa pub [--in <privkey>] [--out <pubkey>]", os.Args[0])
+	toStderr("       %s rsa sign --key <privkey> [--in <file>] [--out <sig>]", os.Args[0])
 }

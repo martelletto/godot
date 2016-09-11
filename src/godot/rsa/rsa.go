@@ -140,22 +140,38 @@ func writePEM(blob *pem.Block, f *os.File) {
 	}
 }
 
-func createFile(path string) *os.File {
-	f, err := os.OpenFile(path, os.O_WRONLY | os.O_CREATE | os.O_EXCL, 0600)
+func createFile(f **os.File, path string) {
+	var err error
+
+	if *f != nil {
+		// directives specifying files must be used at most once
+		usage.Print();
+		os.Exit(1);
+	}
+	*f, err = os.OpenFile(path, os.O_WRONLY | os.O_CREATE | os.O_EXCL, 0600)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "%v\n", err)
 		os.Exit(1)
 	}
-
-	return f
 }
 
-func openFile(path string) *os.File {
-	f, err := os.Open(path)
+func openFile(f **os.File, path string) {
+	var err error
+
+	if *f != nil {
+		// directives specifying files must be used at most once
+		usage.Print();
+		os.Exit(1);
+	}
+	*f, err = os.Open(path)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "%v\n", err)
 		os.Exit(1)
 	}
+}
+
+func openKey(f **os.File, path string) {
+	openFile(f, path);
 	s, err := f.Stat()
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "%v\n", err)
@@ -166,8 +182,6 @@ func openFile(path string) *os.File {
 		    "file %s\n", path)
 		os.Exit(1)
 	}
-
-	return f
 }
 
 func closeFile(f *os.File) {
@@ -210,56 +224,114 @@ func buildX509(rsa *PKCS1_RSAPrivateKey) *X509_RSA_PUBKEY {
 	return x509
 }
 
-func Sign(args []string) {
-	if len(args) != 2 || args[0] != "--key"  {
+// getArg() retrieves a token from 'args' at index i + 1. The token must exist.
+func getArg(args []string, i *int) string {
+	if *i + 1 >= len(args) {
 		usage.Print();
 		os.Exit(1);
 	}
+	*i++;
 
-	rsa := parseRSA(openFile(args[1]))
+	return args[*i]
+}
+
+func Sign(args []string) {
+	var in, out, key *os.File
+
+	for i := 0; i < len(args); i++ {
+		switch args[i] {
+		case "-i":
+			fallthrough
+		case "--in":
+			openFile(&in, getArg(args, &i))
+		case "-k":
+			fallthrough
+		case "--key":
+			openKey(&key, getArg(args, &i))
+		case "-o":
+			fallthrough
+		case "--out":
+			createFile(&out, getArg(args, &i))
+		default:
+			usage.Print();
+			os.Exit(1);
+		}
+	}
+
+	if key == nil {
+		usage.Print();
+		os.Exit(1);
+	}
+	if in == nil {
+		in = os.Stdin
+	}
+	if out == nil {
+		out = os.Stdout
+	}
+
+	rsa := parseRSA(key)
 	if len(rsa.Modulus.Bytes()) != 512 ||
 	   len(rsa.PrivateExponent.Bytes()) != 512 {
 		fmt.Fprintf(os.Stderr, "%s: invalid key size\n", args[1])
 		os.Exit(1)
 	}
 
-	m := pss.Encode(os.Stdin, 4095)
-	os.Stdout.Write(new(big.Int).Exp(m, rsa.PrivateExponent,
-	    rsa.Modulus).Bytes())
+	m := pss.Encode(in, 4095)
+	out.Write(new(big.Int).Exp(m, rsa.PrivateExponent, rsa.Modulus).Bytes())
 }
 
 func Pub(args []string) {
-	var in *os.File = os.Stdin
+	var in, out *os.File
 
-	if len(args) != 0 {
-		if len(args) != 2 || args[0] != "--key"  {
+	for i := 0; i < len(args); i++ {
+		switch args[i] {
+		case "-i":
+			fallthrough
+		case "--in":
+			openKey(&in, getArg(args, &i))
+		case "-o":
+			fallthrough
+		case "--out":
+			createFile(&out, getArg(args, &i))
+		default:
 			usage.Print();
 			os.Exit(1);
 		}
-		in = openFile(args[1])
 	}
 
-	writePEM(buildPublicPEM(buildX509(parseRSA(in))), os.Stdout)
-
-	if in != os.Stdin {
-		closeFile(in);
+	if in == nil {
+		in = os.Stdin
 	}
+	if out == nil {
+		out = os.Stdout
+	}
+
+	writePEM(buildPublicPEM(buildX509(parseRSA(in))), out)
+
+	closeFile(in);
+	closeFile(out);
 }
 
 func New(args []string) {
-	var out *os.File = os.Stdout
+	var out *os.File
 
-	if len(args) != 0 {
-		if len(args) != 2 || args[0] != "--out" {
+	for i := 0; i < len(args); i++ {
+		switch args[i] {
+		case "-o":
+			fallthrough
+		case "--out":
+			createFile(&out, getArg(args, &i))
+		default:
 			usage.Print();
-			os.Exit(1)
+			os.Exit(1);
 		}
-		out = createFile(args[1])
+	}
+
+	if out == nil {
+		out = os.Stdout
 	}
 
 	writePEM(buildPrivatePEM(buildPKCS1(generateRSA(4096))), out)
 
-	if out != os.Stdout {
-		closeFile(out)
-	}
+	closeFile(out)
 }
