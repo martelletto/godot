@@ -22,7 +22,7 @@ func createRSA(l int) *pkcs1.RSAPrivateKey {
 	rsa.PublicExponent = big.NewInt(65537)
 
 	pMinus := new(big.Int).Sub(rsa.Prime1, big.NewInt(1))
-	qMinus := new(big.Int).Sub(rsa.Prime1, big.NewInt(1))
+	qMinus := new(big.Int).Sub(rsa.Prime2, big.NewInt(1))
 	phi := new(big.Int).Mul(pMinus, qMinus)
 
 	rsa.PrivateExponent = new(big.Int).ModInverse(rsa.PublicExponent, phi)
