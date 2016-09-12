@@ -24,14 +24,19 @@ func byte2big(p []byte) *big.Int {
 	return new(big.Int).SetBytes(p)
 }
 
-// big2byte() transforms a *big.Int into a []byte.
-func big2byte(x *big.Int) []byte {
-	return x.Bytes()
-}
-
 // intCeil() rounds the division of two integers up to the nearest integer.
 func intCeil(a, b uint32) uint32 {
 	return uint32(math.Ceil(float64(a)/float64(b)))
+}
+
+// checkLen() implements the first step of 9.1.1 and 9.1.2.
+func checkLen(emBits uint32) uint32 {
+	emLen := intCeil(emBits, 8)
+	if emLen < sha256.Len + saltLen + 2 {
+		fmt.Fprintf(os.Stderr, "invalid msg len %d\n", emLen)
+		os.Exit(1)
+	}
+	return emLen
 }
 
 // mgf1() implements the mask generator function defined in B.2.1.
@@ -54,7 +59,7 @@ func mgf1(mSeed []byte, mLen uint32) []byte {
 	return t.Bytes()[:mLen]
 }
 
-// makeM() implements step 5.
+// makeM() implements steps 5 of 9.1.1 and 12 of 9.1.2.
 func makeM(mHash, salt []byte) []byte {
 	return append(append(make([]byte, 8), mHash...), salt...)
 }
@@ -69,41 +74,42 @@ func dbMask(h []byte, mLen uint32) *big.Int {
 	return byte2big(mgf1(h, mLen))
 }
 
-// makeEM() implements step 12.
-func makeEM(maskedDB *big.Int, h []byte) *big.Int {
-	return byte2big(append(append(big2byte(maskedDB), h...), 0xbc))
-}
-
 // Encode() implements the EMSA-PSS encoding operation.
 func Encode(in io.Reader, emBits uint32) *big.Int {
-	emLen := intCeil(emBits, 8)
-	if emLen < sha256.Len + saltLen + 2 {
-		fmt.Fprintf(os.Stderr, "encoding error\n")
-		os.Exit(1)
-	}
-
+	emLen := checkLen(emBits)
 	salt := rand.Bytes(saltLen)
 	h := sha256.DigestBytes(makeM(sha256.DigestAll(in), salt))
 	mLen := emLen - sha256.Len - 1
+	masked := new(big.Int).Xor(db(salt), dbMask(h, mLen)).Bytes()
+	masked[0] &= byte(0xff >> (8 * emLen - emBits)) // step 11
 
-	maskedDB := new(big.Int).Xor(db(salt), dbMask(h, mLen))
-	for i := uint32(0); i < 8 * emLen - emBits; i++ {
-		// step 11: clear the leftmost 8 * emLen - emBits bits of
-		// maskedDB.
-		maskedDB.SetBit(maskedDB, int(mLen * 8 - 1 - i), 0)
-	}
-
-	return makeEM(maskedDB, h)
+	return byte2big(append(append(masked, h...), 0xbc)) // step 12
 }
 
-func Verify(in io.Reader, EM *big.Int, emBits uint32) bool {
-	emLen := intCeil(emBits, 8)
-//	mHash := sha256.DigestAll(in)
-	if emLen < sha256.Len + saltLen + 2 {
-		fmt.Fprintf(os.Stderr, "inconsistent\n")
-		return false
+func splitEncoded(em []byte, i int) ([]byte, []byte) {
+	if em[len(em) - 1] != 0xbc {
+		fmt.Fprintf(os.Stderr, "invalid trailing byte\n")
+		os.Exit(1)
 	}
-	emBytes := EM.Bytes()
-	fmt.Fprintf(os.Stderr, "%x\n", emBytes)
-	return true
+	return em[:i - sha256.Len], em[i - sha256.Len:i] // skip 0xbc
+}
+
+func Verify(in io.Reader, em []byte, emBits uint32) bool {
+	emLen := checkLen(emBits)
+	masked, h := splitEncoded(em, len(em) - 1)
+	if masked[0] >> byte(8 - (8 * emLen - emBits)) != 0 {
+		fmt.Fprintf(os.Stderr, "invalid masked data block\n")
+		os.Exit(1)
+	}
+
+	mask := mgf1(h, emLen - sha256.Len - 1)
+	mask[0] &= byte(0xff >> (8 * emLen - emBits)) // step 9
+	db := new(big.Int).Xor(byte2big(masked), byte2big(mask)).Bytes()
+	if db[0] != 0x01 || len(db) != sha256.Len + 1 {
+		fmt.Fprintf(os.Stderr, "invalid data block\n")
+		os.Exit(1)
+	}
+
+	t := sha256.DigestBytes(makeM(sha256.DigestAll(in), db[1:]))
+	return sha256.Equal(h, t)
 }

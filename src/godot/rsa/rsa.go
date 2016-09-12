@@ -80,13 +80,11 @@ func Verify(args []string) {
 	s := new(big.Int).SetBytes(sigBody)
 	m := new(big.Int).Exp(s, rsaPub.PublicExponent, rsaPub.Modulus)
 
-	fmt.Fprintf(os.Stderr, "%x\n", m.Bytes()) 
-
-	if pss.Verify(in, m, 4095) == true {
-		fmt.Fprintf(os.Stdout, "ok\n")
+	if pss.Verify(in, m.Bytes(), 4095) {
+		fmt.Fprintf(os.Stdout, "good signature\n")
 		os.Exit(0)
 	} else {
-		fmt.Fprintf(os.Stdout, "not ok\n")
+		fmt.Fprintf(os.Stdout, "invalid signature\n")
 		os.Exit(1)
 	}
 }

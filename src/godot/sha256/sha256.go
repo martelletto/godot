@@ -168,7 +168,7 @@ func DigestAll(r io.Reader) []byte {
 	}
 
 	if i == maxRounds {
-		fmt.Fprintf(os.Stderr, "sha256.Digest: input too long\n")
+		fmt.Fprintf(os.Stderr, "input too long\n")
 		os.Exit(1)
 	}
 
@@ -177,8 +177,21 @@ func DigestAll(r io.Reader) []byte {
 
 func DigestBytes(p []byte) []byte {
 	if len(p) > (1 << 63) - 1 {
-		fmt.Fprintf(os.Stderr, "DigestBytes: message too long\n")
+		fmt.Fprintf(os.Stderr, "input too long\n")
 		os.Exit(1)
 	}
 	return toByteSlice(hash(shaH, wrap(p, 0)))
+}
+
+func Equal(a []byte, b []byte) bool {
+	if len(a) != Len || len(b) != Len {
+		fmt.Fprintf(os.Stderr, "size mismatch\n")
+		os.Exit(1)
+	}
+	for i := 0; i < Len; i++ {
+		if a[i] != b[i] {
+			return false
+		}
+	}
+	return true
 }
