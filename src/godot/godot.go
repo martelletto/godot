@@ -18,6 +18,7 @@
 package main
 
 import (
+	"fmt"
 	"godot/usage"
 	"godot/rsa"
 	"os"
@@ -32,6 +33,11 @@ func getOpt() (string, []string) {
 }
 
 func main() {
+	if len(os.Args) == 2 && os.Args[1] == "version" {
+		fmt.Fprintf(os.Stdout, "godot 1.0\n")
+		os.Exit(0);
+	}
+
 	cmd, args := getOpt()
 	switch cmd {
 	case "new":
@@ -43,7 +49,7 @@ func main() {
 	case "verify":
 		rsa.Verify(args)
 	default:
-		usage.Print();
+		usage.Print()
 		os.Exit(1)
 	}
 }
