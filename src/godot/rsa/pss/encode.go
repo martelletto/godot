@@ -95,3 +95,15 @@ func Encode(in io.Reader, emBits uint32) *big.Int {
 
 	return makeEM(maskedDB, h)
 }
+
+func Verify(in io.Reader, EM *big.Int, emBits uint32) bool {
+	emLen := intCeil(emBits, 8)
+//	mHash := sha256.DigestAll(in)
+	if emLen < sha256.Len + saltLen + 2 {
+		fmt.Fprintf(os.Stderr, "inconsistent\n")
+		return false
+	}
+	emBytes := EM.Bytes()
+	fmt.Fprintf(os.Stderr, "%x\n", emBytes)
+	return true
+}

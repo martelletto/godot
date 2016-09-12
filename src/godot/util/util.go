@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"encoding/pem"
 	"godot/usage"
+	"io"
+	"io/ioutil"
 	"os"
 )
 
@@ -72,6 +74,16 @@ func GetArg(args []string, i *int) string {
 	*i++;
 
 	return args[*i]
+}
+
+func ReadAll(r io.Reader) []byte {
+	body, err := ioutil.ReadAll(r)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "%v\n", err)
+		os.Exit(1)
+	}
+
+	return body
 }
 
 func WritePEM(blob *pem.Block, f *os.File) {

@@ -35,7 +35,7 @@ func createRSA(l int) *pkcs1.RSAPrivateKey {
 }
 
 func Verify(args []string) {
-	var in, key *os.File
+	var in, key, sig *os.File
 
 	for i := 0; i < len(args); i++ {
 		switch args[i] {
@@ -47,18 +47,47 @@ func Verify(args []string) {
 			fallthrough
 		case "--key":
 			util.OpenFile(&key, util.GetArg(args, &i))
+		case "-s":
+			fallthrough
+		case "--sig":
+			util.OpenFile(&sig, util.GetArg(args, &i))
 		default:
 			usage.Print();
 			os.Exit(1);
 		}
 	}
 
-	if key == nil {
+	if key == nil || sig == nil {
 		usage.Print();
 		os.Exit(1);
 	}
 	if in == nil {
 		in = os.Stdin
+	}
+
+	rsaPub := x509.ReadRSA(key)
+	if len(rsaPub.Modulus.Bytes()) != 512 {
+		fmt.Fprintf(os.Stderr, "invalid key size\n")
+		os.Exit(1)
+	}
+
+	sigBody := util.ReadAll(sig)
+	if len(sigBody) != 512 {
+		fmt.Fprintf(os.Stderr, "invalid signature size\n")
+		os.Exit(1)
+	}
+
+	s := new(big.Int).SetBytes(sigBody)
+	m := new(big.Int).Exp(s, rsaPub.PublicExponent, rsaPub.Modulus)
+
+	fmt.Fprintf(os.Stderr, "%x\n", m.Bytes()) 
+
+	if pss.Verify(in, m, 4095) == true {
+		fmt.Fprintf(os.Stdout, "ok\n")
+		os.Exit(0)
+	} else {
+		fmt.Fprintf(os.Stdout, "not ok\n")
+		os.Exit(1)
 	}
 }
 
@@ -99,7 +128,7 @@ func Sign(args []string) {
 	rsa := pkcs1.ReadRSA(key)
 	if len(rsa.Modulus.Bytes()) != 512 ||
 	   len(rsa.PrivateExponent.Bytes()) != 512 {
-		fmt.Fprintf(os.Stderr, "%s: invalid key size\n", args[1])
+		fmt.Fprintf(os.Stderr, "invalid key size\n")
 		os.Exit(1)
 	}
 

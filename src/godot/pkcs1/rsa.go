@@ -53,11 +53,11 @@ func ReadRSA(in *os.File) *RSAPrivateKey {
 	}
 	blob, _ := pem.Decode(body)
 	if blob == nil {
-		fmt.Fprintf(os.Stderr, "%v\n", err)
+		fmt.Fprintf(os.Stderr, "pem decode error\n")
 		os.Exit(1)
 	}
 	if blob.Type != "RSA PRIVATE KEY" || blob.Bytes == nil {
-		fmt.Fprintf(os.Stderr, "%v\n", err)
+		fmt.Fprintf(os.Stderr, "invalid pem\n")
 		os.Exit(1)
 	}
 	_, err = asn1.Unmarshal(blob.Bytes, rsa)
