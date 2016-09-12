@@ -1,3 +1,21 @@
+// Copyright (c) 2016 Pedro Martelletto
+// All rights reserved.
+//
+// Permission to use, copy, modify, and distribute this software for any
+// purpose with or without fee is hereby granted, provided that the above
+// copyright notice and this permission notice appear in all copies.
+//
+// THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL WARRANTIES
+// WITH REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED WARRANTIES OF
+// MERCHANTABILITY AND FITNESS. IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR
+// ANY SPECIAL, DIRECT, INDIRECT, OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES
+// WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER IN AN
+// ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
+// OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
+//
+// The sha256 module implements the SHA-256 digest algorithm as defined in
+// FIPS 180-4.
+
 package sha256
 
 import (
@@ -120,6 +138,7 @@ func hash(h [8]uint32, chunk []byte) [8]uint32 {
 	return h
 }
 
+// wrap() pads the last segment of a message being hashed.
 func wrap(chunk []byte, totalRounds int) []byte {
 	var padding = make([]byte, padLen)
 
@@ -135,6 +154,7 @@ func wrap(chunk []byte, totalRounds int) []byte {
 	return append(chunk, padding[:(z + 8)]...)
 }
 
+// toByteSlice() transforms a [8]uint32 into a []byte.
 func toByteSlice(h [8]uint32) []byte {
 	var r bytes.Buffer
 
@@ -148,6 +168,7 @@ func toByteSlice(h [8]uint32) []byte {
 	return r.Bytes()
 }
 
+// DigestAll() reads from 'r' and returns a digest of its contents.
 func DigestAll(r io.Reader) []byte {
 	var chunk = make([]byte, chunkLen)
 	var h = shaH
@@ -175,6 +196,7 @@ func DigestAll(r io.Reader) []byte {
 	return toByteSlice(h)
 }
 
+// DigestBytes() returns a digest of the bytes pointed to by p.
 func DigestBytes(p []byte) []byte {
 	if len(p) > (1 << 63) - 1 {
 		fmt.Fprintf(os.Stderr, "input too long\n")
@@ -183,6 +205,7 @@ func DigestBytes(p []byte) []byte {
 	return toByteSlice(hash(shaH, wrap(p, 0)))
 }
 
+// Equal() compares two digests, returning 'true' if they are equal.
 func Equal(a []byte, b []byte) bool {
 	if len(a) != Len || len(b) != Len {
 		fmt.Fprintf(os.Stderr, "size mismatch\n")

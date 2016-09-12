@@ -1,3 +1,21 @@
+// Copyright (c) 2016 Pedro Martelletto
+// All rights reserved.
+//
+// Permission to use, copy, modify, and distribute this software for any
+// purpose with or without fee is hereby granted, provided that the above
+// copyright notice and this permission notice appear in all copies.
+//
+// THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL WARRANTIES
+// WITH REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED WARRANTIES OF
+// MERCHANTABILITY AND FITNESS. IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR
+// ANY SPECIAL, DIRECT, INDIRECT, OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES
+// WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER IN AN
+// ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
+// OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
+//
+// The util module is the customary placeholder for functions used elsewhere
+// that don't belong anywhere.
+
 package util
 
 import (
@@ -9,11 +27,13 @@ import (
 	"os"
 )
 
+// CreateFile() creates a new, write-only, chmod 0600 file. Its first argument
+// is a pointer to a *os.File. This pointer needs to be nil, or CreateFile()
+// will fail.
 func CreateFile(f **os.File, path string) {
 	var err error
 
-	if *f != nil {
-		// directives specifying files must be used at most once
+	if *f != nil { // prevent multiple invocations on the same pointer
 		usage.Print();
 		os.Exit(1);
 	}
@@ -25,11 +45,12 @@ func CreateFile(f **os.File, path string) {
 	}
 }
 
+// OpenFile() is a simple wrapper around os.Open(). Its first argument is a
+// pointer to a *os.File. This pointer needs to be nil, or OpenFile() will fail.
 func OpenFile(f **os.File, path string) {
 	var err error
 
-	if *f != nil {
-		// directives specifying files must be used at most once
+	if *f != nil { // prevent multiple invocations on the same pointer
 		usage.Print();
 		os.Exit(1);
 	}
@@ -41,6 +62,7 @@ func OpenFile(f **os.File, path string) {
 	}
 }
 
+// OpenKey() opens a file and ensures sane permissions.
 func OpenKey(f **os.File, path string) {
 	OpenFile(f, path);
 
@@ -57,6 +79,7 @@ func OpenKey(f **os.File, path string) {
 	}
 }
 
+// CloseFile() is a simple wrapper around os.Close().
 func CloseFile(f *os.File) {
 	err := f.Close()
 	if err != nil {
@@ -76,6 +99,7 @@ func GetArg(args []string, i *int) string {
 	return args[*i]
 }
 
+// ReadAll() is a simple wrapper around ioutil.ReadAll().
 func ReadAll(r io.Reader) []byte {
 	body, err := ioutil.ReadAll(r)
 	if err != nil {
@@ -86,8 +110,9 @@ func ReadAll(r io.Reader) []byte {
 	return body
 }
 
-func WritePEM(blob *pem.Block, f *os.File) {
-	err := pem.Encode(f, blob)
+// WritePEM() is a simple wrapper around pem.Encode().
+func WritePEM(blob *pem.Block, w io.Writer) {
+	err := pem.Encode(w, blob)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "%v\n", blob)
 		os.Exit(1)

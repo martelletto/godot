@@ -1,3 +1,21 @@
+// Copyright (c) 2016 Pedro Martelletto
+// All rights reserved.
+//
+// Permission to use, copy, modify, and distribute this software for any
+// purpose with or without fee is hereby granted, provided that the above
+// copyright notice and this permission notice appear in all copies.
+//
+// THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL WARRANTIES
+// WITH REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED WARRANTIES OF
+// MERCHANTABILITY AND FITNESS. IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR
+// ANY SPECIAL, DIRECT, INDIRECT, OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES
+// WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER IN AN
+// ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
+// OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
+//
+// The x509 module exports functions that allow RSA X.509 public keys to be
+// written and read.
+
 package x509
 
 import (
@@ -6,6 +24,7 @@ import (
 	"fmt"
 	"godot/pkcs1"
 	"godot/util"
+	"io"
 	"io/ioutil"
 	"os"
 )
@@ -22,8 +41,10 @@ type RSA_PUBKEY struct {
 	Body		asn1.BitString
 }
 
+// As per https://tools.ietf.org/rfc/rfc3279.txt, 2.3.1
 var rsaEncryption asn1.ObjectIdentifier = []int{1, 2, 840, 113549, 1, 1, 1}
 
+// wrap() transforms a PKCS1 private key into a X.509 public key.
 func wrap(rsa *pkcs1.RSAPrivateKey) *RSA_PUBKEY {
 	var x509 = new(RSA_PUBKEY)
 	var rsaPub = new(pkcs1.RSAPublicKey)
@@ -42,6 +63,7 @@ func wrap(rsa *pkcs1.RSAPrivateKey) *RSA_PUBKEY {
 	return x509
 }
 
+// unwrap() transforms a X.509 public key into a PKCS1 public key.
 func unwrap(x509 *RSA_PUBKEY) *pkcs1.RSAPublicKey {
 	var rsaPub = new(pkcs1.RSAPublicKey)
 
@@ -62,7 +84,9 @@ func unwrap(x509 *RSA_PUBKEY) *pkcs1.RSAPublicKey {
 	return rsaPub
 }
 
-func WriteRSA(rsa *pkcs1.RSAPrivateKey, f *os.File) {
+// WriteRSA() transforms a PKCS1 private key into a X.509 public key and writes
+// it on 'w'.
+func WriteRSA(rsa *pkcs1.RSAPrivateKey, w io.Writer) {
 	var blob = new(pem.Block)
 	var err error
 
@@ -73,13 +97,15 @@ func WriteRSA(rsa *pkcs1.RSAPrivateKey, f *os.File) {
 		os.Exit(1)
 	}
 
-	util.WritePEM(blob, f)
+	util.WritePEM(blob, w)
 }
 
-func ReadRSA(in *os.File) *pkcs1.RSAPublicKey {
+// ReadRSA() reads a X.509 public key from 'r', transforms it into a PKCS1
+// public key, and returns it.
+func ReadRSA(r io.Reader) *pkcs1.RSAPublicKey {
 	var x509 = new(RSA_PUBKEY)
 
-	body, err := ioutil.ReadAll(in)
+	body, err := ioutil.ReadAll(r)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "%v\n", err)
 		os.Exit(1)

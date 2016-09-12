@@ -1,3 +1,24 @@
+// Copyright (c) 2016 Pedro Martelletto
+// All rights reserved.
+//
+// Permission to use, copy, modify, and distribute this software for any
+// purpose with or without fee is hereby granted, provided that the above
+// copyright notice and this permission notice appear in all copies.
+//
+// THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL WARRANTIES
+// WITH REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED WARRANTIES OF
+// MERCHANTABILITY AND FITNESS. IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR
+// ANY SPECIAL, DIRECT, INDIRECT, OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES
+// WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER IN AN
+// ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
+// OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
+//
+// The pss module implements the generation and verification of probabilistic
+// RSA signatures as specified in PKCS#1v2.2. The mask generator function used
+// is the one defined in section B.2.1 of the same document. SHA-256 is used
+// as the digest mechanism, and the salt length is assumed to be the same size
+// as a SHA-256 digest.
+
 package pss
 
 import (
@@ -16,9 +37,6 @@ const (
 	saltLen = sha256.Len
 )
 
-// Unless specified otherwise, all references in this file are relative to
-// PKCS#1v2.2 section 9.1.1.
-
 // byte2big() transforms a []byte into a *big.Int.
 func byte2big(p []byte) *big.Int {
 	return new(big.Int).SetBytes(p)
@@ -33,7 +51,7 @@ func intCeil(a, b uint32) uint32 {
 func checkLen(emBits uint32) uint32 {
 	emLen := intCeil(emBits, 8)
 	if emLen < sha256.Len + saltLen + 2 {
-		fmt.Fprintf(os.Stderr, "invalid msg len %d\n", emLen)
+		fmt.Fprintf(os.Stderr, "invalid msg len\n")
 		os.Exit(1)
 	}
 	return emLen
@@ -64,17 +82,17 @@ func makeM(mHash, salt []byte) []byte {
 	return append(append(make([]byte, 8), mHash...), salt...)
 }
 
-// db() implements step 8.
+// db() implements step 8 of 9.1.1.
 func db(salt []byte) *big.Int {
 	return byte2big(append(append(make([]byte, 0), 0x01), salt...))
 }
 
-// dbMask() implements step 9.
+// dbMask() implements step 9 of 9.1.1.
 func dbMask(h []byte, mLen uint32) *big.Int {
 	return byte2big(mgf1(h, mLen))
 }
 
-// Encode() implements the EMSA-PSS encoding operation.
+// Encode() implements the PSS encoding operation (section 9.1.1)
 func Encode(in io.Reader, emBits uint32) *big.Int {
 	emLen := checkLen(emBits)
 	salt := rand.Bytes(saltLen)
@@ -86,19 +104,23 @@ func Encode(in io.Reader, emBits uint32) *big.Int {
 	return byte2big(append(append(masked, h...), 0xbc)) // step 12
 }
 
+// splitEncoded() splits an encoded blob into a masked data block and hash
+// components.
 func splitEncoded(em []byte, i int) ([]byte, []byte) {
 	if em[len(em) - 1] != 0xbc {
-		fmt.Fprintf(os.Stderr, "invalid trailing byte\n")
+		fmt.Fprintf(os.Stderr, "invalid signature\n")
 		os.Exit(1)
 	}
+
 	return em[:i - sha256.Len], em[i - sha256.Len:i] // skip 0xbc
 }
 
+// Verify() implements the PSS verification operation (section 9.1.2)
 func Verify(in io.Reader, em []byte, emBits uint32) bool {
 	emLen := checkLen(emBits)
 	masked, h := splitEncoded(em, len(em) - 1)
 	if masked[0] >> byte(8 - (8 * emLen - emBits)) != 0 {
-		fmt.Fprintf(os.Stderr, "invalid masked data block\n")
+		fmt.Fprintf(os.Stderr, "invalid signature\n")
 		os.Exit(1)
 	}
 
@@ -106,10 +128,10 @@ func Verify(in io.Reader, em []byte, emBits uint32) bool {
 	mask[0] &= byte(0xff >> (8 * emLen - emBits)) // step 9
 	db := new(big.Int).Xor(byte2big(masked), byte2big(mask)).Bytes()
 	if db[0] != 0x01 || len(db) != sha256.Len + 1 {
-		fmt.Fprintf(os.Stderr, "invalid data block\n")
+		fmt.Fprintf(os.Stderr, "invalid signature\n")
 		os.Exit(1)
 	}
-
 	t := sha256.DigestBytes(makeM(sha256.DigestAll(in), db[1:]))
+
 	return sha256.Equal(h, t)
 }
