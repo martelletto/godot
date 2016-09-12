@@ -34,17 +34,6 @@ func createRSA(l int) *pkcs1.RSAPrivateKey {
 	return rsa
 }
 
-// getArg() retrieves a token from 'args' at index i + 1. The token must exist.
-func getArg(args []string, i *int) string {
-	if *i + 1 >= len(args) {
-		usage.Print();
-		os.Exit(1);
-	}
-	*i++;
-
-	return args[*i]
-}
-
 func Verify(args []string) {
 	var in, key *os.File
 
@@ -53,11 +42,11 @@ func Verify(args []string) {
 		case "-i":
 			fallthrough
 		case "--in":
-			util.OpenFile(&in, getArg(args, &i))
+			util.OpenFile(&in, util.GetArg(args, &i))
 		case "-k":
 			fallthrough
 		case "--key":
-			util.OpenFile(&key, getArg(args, &i))
+			util.OpenFile(&key, util.GetArg(args, &i))
 		default:
 			usage.Print();
 			os.Exit(1);
@@ -81,15 +70,15 @@ func Sign(args []string) {
 		case "-i":
 			fallthrough
 		case "--in":
-			util.OpenFile(&in, getArg(args, &i))
+			util.OpenFile(&in, util.GetArg(args, &i))
 		case "-k":
 			fallthrough
 		case "--key":
-			util.OpenKey(&key, getArg(args, &i))
+			util.OpenKey(&key, util.GetArg(args, &i))
 		case "-o":
 			fallthrough
 		case "--out":
-			util.CreateFile(&out, getArg(args, &i))
+			util.CreateFile(&out, util.GetArg(args, &i))
 		default:
 			usage.Print();
 			os.Exit(1);
@@ -129,11 +118,11 @@ func Pub(args []string) {
 		case "-i":
 			fallthrough
 		case "--in":
-			util.OpenKey(&in, getArg(args, &i))
+			util.OpenKey(&in, util.GetArg(args, &i))
 		case "-o":
 			fallthrough
 		case "--out":
-			util.CreateFile(&out, getArg(args, &i))
+			util.CreateFile(&out, util.GetArg(args, &i))
 		default:
 			usage.Print();
 			os.Exit(1);
@@ -160,7 +149,7 @@ func New(args []string) {
 		case "-o":
 			fallthrough
 		case "--out":
-			util.CreateFile(&out, getArg(args, &i))
+			util.CreateFile(&out, util.GetArg(args, &i))
 		default:
 			usage.Print();
 			os.Exit(1);
