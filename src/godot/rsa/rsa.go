@@ -222,13 +222,13 @@ func Command(args []string) {
         // args[1] = new|pub|sign|verify
         switch args[1] {
         case "new":
-                newkey(args[1:])
+                newkey(args[2:])
         case "pub":
-                pubkey(args[1:])
+                pubkey(args[2:])
         case "sign":
-                sign(args[1:])
+                sign(args[2:])
         case "verify":
-                verify(args[1:])
+                verify(args[2:])
         default:
                 usageError()
         }
