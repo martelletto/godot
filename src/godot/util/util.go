@@ -21,7 +21,6 @@ package util
 import (
 	"fmt"
 	"encoding/pem"
-	"godot/usage"
 	"io"
 	"io/ioutil"
 	"os"
@@ -34,7 +33,7 @@ func CreateFile(f **os.File, path string) {
 	var err error
 
 	if *f != nil { // prevent multiple invocations on the same pointer
-		usage.Print();
+		fmt.Fprintf(os.Stderr, "multiple use of options [ikos]\n")
 		os.Exit(1);
 	}
 
@@ -51,7 +50,7 @@ func OpenFile(f **os.File, path string) {
 	var err error
 
 	if *f != nil { // prevent multiple invocations on the same pointer
-		usage.Print();
+		fmt.Fprintf(os.Stderr, "multiple use of options [ikos]\n")
 		os.Exit(1);
 	}
 
@@ -91,7 +90,8 @@ func CloseFile(f *os.File) {
 // GetArg() retrieves a token from 'args' at index i + 1. The token must exist.
 func GetArg(args []string, i *int) string {
 	if *i + 1 >= len(args) {
-		usage.Print();
+		fmt.Fprintf(os.Stderr, "option %s requires an argument",
+		    args[*i])
 		os.Exit(1);
 	}
 	*i++;

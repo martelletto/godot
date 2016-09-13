@@ -22,7 +22,6 @@ import (
 	"godot/pkcs1"
 	"godot/rand"
 	"godot/rsa/pss"
-	"godot/usage"
 	"godot/util"
 	"godot/x509"
 	"math/big"
@@ -52,8 +51,8 @@ func createRSA(l int) *pkcs1.RSAPrivateKey {
 	return rsa
 }
 
-// Verify() the entry point for the verification of RSA signatures.
-func Verify(args []string) {
+// verify() the entry point for the verification of a signature.
+func verify(args []string) {
 	var in, key, sig *os.File
 
 	for i := 0; i < len(args); i++ {
@@ -71,14 +70,12 @@ func Verify(args []string) {
 		case "--sig":
 			util.OpenFile(&sig, util.GetArg(args, &i))
 		default:
-			usage.Print();
-			os.Exit(1);
+			usageError()
 		}
 	}
 
 	if key == nil || sig == nil {
-		usage.Print();
-		os.Exit(1);
+		usageError()
 	}
 	if in == nil {
 		in = os.Stdin
@@ -113,8 +110,8 @@ func Verify(args []string) {
 	util.CloseFile(sig)
 }
 
-// Sign() the entry point for the generation of RSA signatures.
-func Sign(args []string) {
+// sign() the entry point for the generation of a signature.
+func sign(args []string) {
 	var in, out, key *os.File
 
 	for i := 0; i < len(args); i++ {
@@ -132,14 +129,12 @@ func Sign(args []string) {
 		case "--out":
 			util.CreateFile(&out, util.GetArg(args, &i))
 		default:
-			usage.Print();
-			os.Exit(1);
+			usageError()
 		}
 	}
 
 	if key == nil {
-		usage.Print();
-		os.Exit(1);
+		usageError()
 	}
 	if in == nil {
 		in = os.Stdin
@@ -163,8 +158,8 @@ func Sign(args []string) {
 	util.CloseFile(out)
 }
 
-// Pub() allows a public key to be exported from a private key.
-func Pub(args []string) {
+// pubkey() is the entry point for the derivation of a public key.
+func pubkey(args []string) {
 	var in, out *os.File
 
 	for i := 0; i < len(args); i++ {
@@ -178,8 +173,7 @@ func Pub(args []string) {
 		case "--out":
 			util.CreateFile(&out, util.GetArg(args, &i))
 		default:
-			usage.Print();
-			os.Exit(1);
+			usageError()
 		}
 	}
 
@@ -195,8 +189,8 @@ func Pub(args []string) {
 	util.CloseFile(out);
 }
 
-// New() is the entry point for the generation of RSA keys.
-func New(args []string) {
+// newkey() is the entry point for the generation of a private key.
+func newkey(args []string) {
 	var out *os.File
 
 	for i := 0; i < len(args); i++ {
@@ -206,8 +200,7 @@ func New(args []string) {
 		case "--out":
 			util.CreateFile(&out, util.GetArg(args, &i))
 		default:
-			usage.Print();
-			os.Exit(1);
+			usageError()
 		}
 	}
 
@@ -217,4 +210,28 @@ func New(args []string) {
 
 	pkcs1.WriteRSA(createRSA(4096), out)
 	util.CloseFile(out)
+}
+
+// Command() is the entry point for command line operations.
+func Command(args []string) {
+        // args[0] = "rsa"
+        if len(args) < 2 {
+                usageError()
+        }
+
+        // args[1] = new|pub|sign|verify
+        switch args[1] {
+        case "new":
+                newkey(args[1:])
+        case "pub":
+                pubkey(args[1:])
+        case "sign":
+                sign(args[1:])
+        case "verify":
+                verify(args[1:])
+        default:
+                usageError()
+        }
+
+        os.Exit(0)
 }

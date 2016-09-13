@@ -23,6 +23,7 @@ import (
 	"bytes"
 	"encoding/binary"
 	"fmt"
+	"godot/util"
 	"io"
 	"os"
 )
@@ -217,4 +218,62 @@ func Equal(a []byte, b []byte) bool {
 		}
 	}
 	return true
+}
+
+func usageError() {
+	fmt.Fprintf(os.Stderr,
+`usage: godot sha256 [-b] [-i <file>] [-o <file>]
+
+-b		write the digest in binary instead of hexadecimal format
+-i <file>	read data from <file> instead of stdin
+-o <file>	write data to <file> instead of stdout
+
+--{binary,in,out} can be used instead of -{b,i,o}.
+`)
+	os.Exit(1)
+}
+
+// Command() is the entry point for command line operations.
+func Command(args []string) {
+	var in, out *os.File
+	var binary = false
+
+	// args[0] = "sha256"
+	if len(args) < 1 {
+		usageError()
+	}
+
+	// parse options
+	for i := 1; i < len(args); i++ {
+		switch args[i] {
+		case "-b":
+			fallthrough
+		case "--binary":
+			binary = true
+		case "-i":
+			fallthrough
+		case "--in":
+			util.OpenFile(&in, util.GetArg(args, &i))
+		case "-o":
+			fallthrough
+		case "--out":
+			util.CreateFile(&out, util.GetArg(args, &i))
+		default:
+			usageError()
+		}
+	}
+
+	if in == nil {
+		in = os.Stdin
+	}
+	if out == nil {
+		out = os.Stdout
+	}
+
+	h := DigestAll(in)
+	if binary {
+		out.Write(h)
+	} else {
+		fmt.Fprintf(out, "%x\n", h)
+	}
 }
