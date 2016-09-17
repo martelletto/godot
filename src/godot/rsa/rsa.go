@@ -18,8 +18,8 @@ import (
 )
 
 // createRSA() creates a new RSA key pair.
-func createRSA(l int) *pkcs1.RSAPrivateKey {
-	var rsa = new(pkcs1.RSAPrivateKey)
+func createRSA(l int) *pkcs1.PrivateKey {
+	var rsa = new(pkcs1.PrivateKey)
 
 	rsa.Version = big.NewInt(0)
 	rsa.Prime1 = rand.Prime(l/2) // prime p
@@ -132,7 +132,7 @@ func sign(args []string) {
 		out = os.Stdout
 	}
 
-	rsa := pkcs1.ReadRSA(key)
+	rsa := pkcs1.Read(key)
 	if len(rsa.Modulus.Bytes()) != 512 ||
 	   len(rsa.PrivateExponent.Bytes()) != 512 {
 		fmt.Fprintf(os.Stderr, "invalid key size\n")
@@ -173,7 +173,7 @@ func pubkey(args []string) {
 		out = os.Stdout
 	}
 
-	x509.WriteRSA(pkcs1.ReadRSA(in), out)
+	x509.WriteRSA(pkcs1.Read(in), out)
 	util.CloseFile(in);
 	util.CloseFile(out);
 }
@@ -197,7 +197,7 @@ func newkey(args []string) {
 		out = os.Stdout
 	}
 
-	pkcs1.WriteRSA(createRSA(4096), out)
+	pkcs1.Write(createRSA(4096), out)
 	util.CloseFile(out)
 }
 
