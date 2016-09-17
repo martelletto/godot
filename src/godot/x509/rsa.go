@@ -11,7 +11,7 @@ import (
 	"encoding/asn1"
 	"encoding/pem"
 	"fmt"
-	"godot/pkcs1"
+	"godot/rsa/pkcs1"
 	"godot/util"
 	"io"
 	"io/ioutil"

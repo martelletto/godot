@@ -8,8 +8,8 @@ package rsa
 
 import (
 	"fmt"
-	"godot/pkcs1"
 	"godot/rand"
+	"godot/rsa/pkcs1"
 	"godot/rsa/pss"
 	"godot/util"
 	"godot/x509"
