@@ -17,8 +17,8 @@ import (
 	"os"
 )
 
-// createRSA() creates a new RSA key pair.
-func createRSA(l int) *pkcs1.PrivateKey {
+// createKey() creates a new RSA key pair.
+func createKey(l int) *pkcs1.PrivateKey {
 	var rsa = new(pkcs1.PrivateKey)
 
 	rsa.Version = big.NewInt(0)
@@ -197,7 +197,7 @@ func newkey(args []string) {
 		out = os.Stdout
 	}
 
-	pkcs1.Write(createRSA(4096), out)
+	pkcs1.Write(createKey(4096), out)
 	util.CloseFile(out)
 }
 
