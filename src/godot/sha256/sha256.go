@@ -223,7 +223,8 @@ func usageError() {
 
 // Command() is the entry point for command line operations.
 func Command(args []string) {
-	var in, out *os.File
+	var in  *os.File = os.Stdin
+	var out *os.File = os.Stdout
 	var binary = false
 
 	// args[0] = "sha256"
@@ -241,21 +242,14 @@ func Command(args []string) {
 		case "-i":
 			fallthrough
 		case "--in":
-			util.OpenFile(&in, util.GetArg(args, &i))
+			util.OpenFile(&in, os.Stdin, util.GetArg(args, &i))
 		case "-o":
 			fallthrough
 		case "--out":
-			util.CreateFile(&out, util.GetArg(args, &i))
+			util.CreateFile(&out, os.Stdout, util.GetArg(args, &i))
 		default:
 			usageError()
 		}
-	}
-
-	if in == nil {
-		in = os.Stdin
-	}
-	if out == nil {
-		out = os.Stdout
 	}
 
 	h := DigestAll(in)

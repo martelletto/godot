@@ -42,22 +42,24 @@ func createKey(l int) *pkcs1.PrivateKey {
 
 // verify() the entry point for the verification of a signature.
 func verify(args []string) {
-	var in, key, sig *os.File
+	var in  *os.File = os.Stdin
+	var key *os.File = nil
+	var sig *os.File = nil
 
 	for i := 0; i < len(args); i++ {
 		switch args[i] {
 		case "-i":
 			fallthrough
 		case "--in":
-			util.OpenFile(&in, util.GetArg(args, &i))
+			util.OpenFile(&in, os.Stdin, util.GetArg(args, &i))
 		case "-k":
 			fallthrough
 		case "--key":
-			util.OpenFile(&key, util.GetArg(args, &i))
+			util.OpenFile(&key, nil, util.GetArg(args, &i))
 		case "-s":
 			fallthrough
 		case "--sig":
-			util.OpenFile(&sig, util.GetArg(args, &i))
+			util.OpenFile(&sig, nil, util.GetArg(args, &i))
 		default:
 			usageError()
 		}
@@ -65,9 +67,6 @@ func verify(args []string) {
 
 	if key == nil || sig == nil {
 		usageError()
-	}
-	if in == nil {
-		in = os.Stdin
 	}
 
 	rsaPub := x509.ReadRSA(key)
@@ -101,22 +100,24 @@ func verify(args []string) {
 
 // sign() the entry point for the generation of a signature.
 func sign(args []string) {
-	var in, out, key *os.File
+	var in  *os.File = os.Stdin
+	var out *os.File = os.Stdout
+	var key *os.File = nil
 
 	for i := 0; i < len(args); i++ {
 		switch args[i] {
 		case "-i":
 			fallthrough
 		case "--in":
-			util.OpenFile(&in, util.GetArg(args, &i))
+			util.OpenFile(&in, os.Stdin, util.GetArg(args, &i))
 		case "-k":
 			fallthrough
 		case "--key":
-			util.OpenKey(&key, util.GetArg(args, &i))
+			util.OpenKey(&key, nil, util.GetArg(args, &i))
 		case "-o":
 			fallthrough
 		case "--out":
-			util.CreateFile(&out, util.GetArg(args, &i))
+			util.CreateFile(&out, os.Stdout, util.GetArg(args, &i))
 		default:
 			usageError()
 		}
@@ -124,12 +125,6 @@ func sign(args []string) {
 
 	if key == nil {
 		usageError()
-	}
-	if in == nil {
-		in = os.Stdin
-	}
-	if out == nil {
-		out = os.Stdout
 	}
 
 	rsa := pkcs1.Read(key)
@@ -149,28 +144,22 @@ func sign(args []string) {
 
 // pubkey() is the entry point for the derivation of a public key.
 func pubkey(args []string) {
-	var in, out *os.File
+	var in  *os.File = os.Stdin
+	var out *os.File = os.Stdout
 
 	for i := 0; i < len(args); i++ {
 		switch args[i] {
 		case "-i":
 			fallthrough
 		case "--in":
-			util.OpenKey(&in, util.GetArg(args, &i))
+			util.OpenKey(&in, os.Stdin, util.GetArg(args, &i))
 		case "-o":
 			fallthrough
 		case "--out":
-			util.CreateFile(&out, util.GetArg(args, &i))
+			util.CreateFile(&out, os.Stdout, util.GetArg(args, &i))
 		default:
 			usageError()
 		}
-	}
-
-	if in == nil {
-		in = os.Stdin
-	}
-	if out == nil {
-		out = os.Stdout
 	}
 
 	x509.WriteRSA(pkcs1.Read(in), out)
@@ -180,21 +169,17 @@ func pubkey(args []string) {
 
 // newkey() is the entry point for the generation of a private key.
 func newkey(args []string) {
-	var out *os.File
+	var out *os.File = os.Stdout
 
 	for i := 0; i < len(args); i++ {
 		switch args[i] {
 		case "-o":
 			fallthrough
 		case "--out":
-			util.CreateFile(&out, util.GetArg(args, &i))
+			util.CreateFile(&out, os.Stdout, util.GetArg(args, &i))
 		default:
 			usageError()
 		}
-	}
-
-	if out == nil {
-		out = os.Stdout
 	}
 
 	pkcs1.Write(createKey(4096), out)

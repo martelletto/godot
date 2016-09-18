@@ -13,12 +13,12 @@ import (
 )
 
 // CreateFile() creates a new, write-only, chmod 0600 file. Its first argument
-// is a pointer to a *os.File. This pointer needs to be nil, or CreateFile()
-// will fail.
-func CreateFile(f **os.File, path string) {
+// is a pointer f to a *os.File. f needs to be equal to d (a default value for
+// f), or CreateFile() will fail.
+func CreateFile(f **os.File, d *os.File, path string) {
 	var err error
 
-	if *f != nil { // prevent multiple invocations on the same pointer
+	if *f != d { // prevent multiple invocations on *f
 		fmt.Fprintf(os.Stderr, "multiple use of options [ikos]\n")
 		os.Exit(1);
 	}
@@ -31,11 +31,12 @@ func CreateFile(f **os.File, path string) {
 }
 
 // OpenFile() is a simple wrapper around os.Open(). Its first argument is a
-// pointer to a *os.File. This pointer needs to be nil, or OpenFile() will fail.
-func OpenFile(f **os.File, path string) {
+// pointer f to a *os.File. f needs to be equal to d (a default value for f),
+// or OpenFile() will fail.
+func OpenFile(f **os.File, d *os.File, path string) {
 	var err error
 
-	if *f != nil { // prevent multiple invocations on the same pointer
+	if *f != d { // prevent multiple invocations on *f
 		fmt.Fprintf(os.Stderr, "multiple use of options [ikos]\n")
 		os.Exit(1);
 	}
@@ -48,8 +49,8 @@ func OpenFile(f **os.File, path string) {
 }
 
 // OpenKey() opens a file and ensures sane permissions.
-func OpenKey(f **os.File, path string) {
-	OpenFile(f, path);
+func OpenKey(f **os.File, d *os.File, path string) {
+	OpenFile(f, d, path);
 
 	s, err := f.Stat()
 	if err != nil {
