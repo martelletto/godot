@@ -6,7 +6,6 @@ package util
 
 import (
 	"fmt"
-	"encoding/pem"
 	"io"
 	"io/ioutil"
 	"os"
@@ -95,13 +94,4 @@ func ReadAll(r io.Reader) []byte {
 	}
 
 	return body
-}
-
-// WritePEM() is a simple wrapper around pem.Encode().
-func WritePEM(blob *pem.Block, w io.Writer) {
-	err := pem.Encode(w, blob)
-	if err != nil {
-		fmt.Fprintf(os.Stderr, "%v\n", blob)
-		os.Exit(1)
-	}
 }

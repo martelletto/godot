@@ -6,68 +6,64 @@ package rand
 
 import (
 	"crypto/rand"
-	"fmt"
+	"errors"
 	"math/big"
 	"os"
 )
 
-func openReader() *os.File {
+// Prime() obtains a random n-bit prime from /dev/urandom.
+func Prime(n int) (*big.Int, error) {
 	r, err := os.Open("/dev/urandom")
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "%v\n", err)
-		os.Exit(1)
+		return nil, err
 	}
-
-	return r
-}
-
-func closeReader(r *os.File) {
-	err := r.Close()
-	if err != nil {
-		fmt.Fprintf(os.Stderr, "%v\n", err)
-		os.Exit(1)
-	}
-}
-
-// Prime() obtains a random n-bit prime from /dev/urandom.
-func Prime(n int) *big.Int {
-	r := openReader()
 	x, err := rand.Prime(r, n)
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "%v\n", err)
-		os.Exit(1)
+		return nil, err
 	}
-	closeReader(r)
+	err = r.Close()
+	if err != nil {
+		return nil, err
+	}
 
-	return x
+	return x, nil
 }
 
 // Bytes() reads n bytes from /dev/urandom.
-func Bytes(n int) []byte {
-	r := openReader()
-	p := make([]byte, n)
-	n, err := r.Read(p)
+func Bytes(n int) ([]byte, error) {
+	r, err := os.Open("/dev/urandom")
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "%v\n", err)
-		os.Exit(1)
-	} else if n != len(p) {
-		fmt.Fprintf(os.Stderr, "short read\n")
-		os.Exit(1)
+		return nil, err
 	}
-	closeReader(r)
+	p := make([]byte, n)
+	n, err = r.Read(p)
+	if err != nil {
+		return nil, err
+	} else if n != len(p) {
+		return nil, errors.New("short read")
+	}
+	err = r.Close()
+	if err != nil {
+		return nil, err
+	}
 
-	return p
+	return p, nil
 }
 
 // Int() reads a uniform random integer in the range [0, max).
-func Int(max *big.Int) *big.Int {
-	r := openReader()
+func Int(max *big.Int) (*big.Int, error) {
+	r, err := os.Open("/dev/urandom")
+	if err != nil {
+		return nil, err
+	}
 	n, err := rand.Int(r, max)
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "%v\n", err)
-		os.Exit(1)
+		return nil, err
 	}
-	closeReader(r)
+	err = r.Close()
+	if err != nil {
+		return nil, err
+	}
 
-	return n
+	return n, nil
 }

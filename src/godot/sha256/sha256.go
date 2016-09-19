@@ -10,6 +10,7 @@ import (
 	"bufio"
 	"bytes"
 	"encoding/binary"
+	"errors"
 	"fmt"
 	"godot/util"
 	"io"
@@ -17,10 +18,10 @@ import (
 )
 
 const (
-	chunkLen = 1 << 13  // how much we try to read from stdin in one loop
+	chunkLen = 1 << 13  // how much we try to read in one loop
 	maxRounds = 1 << 48 // maximum number of times we will loop
-	padLen = 72         // space reserved for padding of the last message
-	Len = 32            // length of a SHA-256 digest in bytes
+	padLen = 72         // bytes reserved for padding
+	Len = 32            // bytes in a SHA-256 digest
 )
 
 var shaK = [64]uint32 {
@@ -111,30 +112,25 @@ func sha256(h [8]uint32, m []uint32) [8]uint32 {
 	return h
 }
 
-func hash(h [8]uint32, chunk []byte) [8]uint32 {
-	var m = make([]uint32, len(chunk) / 4)
-
+func hash(h [8]uint32, chunk []byte) ([8]uint32, error) {
+	m := make([]uint32, len(chunk) / 4)
 	err := binary.Read(bytes.NewBuffer(chunk), binary.BigEndian, m)
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "%v\n", err)
-		os.Exit(1)
+		return h, err
 	}
-
 	for i := 0; i < len(m); i += 16 {
 		h = sha256(h, m[i:(i+16)])
 	}
 
-	return h
+	return h, nil
 }
 
 // wrap() pads the last segment of a message being hashed.
 func wrap(chunk []byte, totalRounds int) []byte {
-	var padding = make([]byte, padLen)
-
+	padding := make([]byte, padLen)
 	padding[0] = 0x80 // one bit set followed by seven bits unset
 	z := uint64((56 - len(chunk))) % 64 // followed by z zero bytes
 	t := uint64((len(chunk) + (totalRounds * chunkLen)) * 8)
-
 	for i := uint64(0); i < 8; i++ {
 		// total msg len in bits, in big-endian notation
 		padding[z + i] = byte((t >> (8 * (7 - i))) & 0xff)
@@ -144,62 +140,59 @@ func wrap(chunk []byte, totalRounds int) []byte {
 }
 
 // toByteSlice() transforms a [8]uint32 into a []byte.
-func toByteSlice(h [8]uint32) []byte {
-	var r bytes.Buffer
-
-	r.Grow(Len)
-	err := binary.Write(&r, binary.BigEndian, h)
+func toByteSlice(h [8]uint32) ([]byte, error) {
+	r := bytes.NewBuffer(make([]byte, 0, Len))
+	err := binary.Write(r, binary.BigEndian, h)
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "%v\n", err)
-		os.Exit(1)
+		return nil, err
 	}
-
-	return r.Bytes()
+	return r.Bytes(), nil
 }
 
-// DigestAll() reads from 'r' and returns a digest of its contents.
-func DigestAll(r io.Reader) []byte {
+// DigestAll() returns a digest of the contents of r.
+func DigestAll(r io.Reader) ([]byte, error) {
 	var chunk = make([]byte, chunkLen)
 	var h = shaH
-	var i int
+	var i, n int
+	var err error
 
 	in := bufio.NewReader(r)
-	for i = 0; i < maxRounds; i++ {
-		n, err := in.Read(chunk)
+	for i = 0; i < maxRounds && err == nil; i++ {
+		n, err = in.Read(chunk)
 		if err != nil && err != io.EOF {
-			fmt.Fprintf(os.Stderr, "%v\n", err)
-			os.Exit(1)
+			return nil, err
 		} else if n != chunkLen {
-			h = hash(h, wrap(chunk[:n], i))
+			h, err = hash(h, wrap(chunk[:n], i))
 			break
 		} else {
-			h = hash(h, chunk)
+			h, err = hash(h, chunk)
 		}
 	}
 
-	if i == maxRounds {
-		fmt.Fprintf(os.Stderr, "input too long\n")
-		os.Exit(1)
+	if err != nil {
+		return nil, err
+	} else if i == maxRounds {
+		return nil, errors.New("input too long")
 	}
 
 	return toByteSlice(h)
 }
 
 // DigestBytes() returns a digest of the bytes pointed to by p.
-func DigestBytes(p []byte) []byte {
+func DigestBytes(p []byte) ([]byte, error) {
 	if len(p) > (1 << 63) - 1 {
-		fmt.Fprintf(os.Stderr, "input too long\n")
-		os.Exit(1)
+		return nil, errors.New("input too long")
 	}
-	return toByteSlice(hash(shaH, wrap(p, 0)))
+	h, err := hash(shaH, wrap(p, 0))
+	if err != nil {
+		return nil, err
+	}
+
+	return toByteSlice(h)
 }
 
-// Equal() compares two digests, returning 'true' if they are equal.
+// Equal() compares two digests, returning true if they are equal.
 func Equal(a []byte, b []byte) bool {
-	if len(a) != Len || len(b) != Len {
-		fmt.Fprintf(os.Stderr, "size mismatch\n")
-		os.Exit(1)
-	}
 	for i := 0; i < Len; i++ {
 		if a[i] != b[i] {
 			return false
@@ -242,17 +235,19 @@ func Command(args []string) {
 		case "-i":
 			fallthrough
 		case "--in":
-			util.OpenFile(&in, os.Stdin, util.GetArg(args, &i))
+			util.OpenFile(&in, os.Stdin,
+			    util.GetArg(args, &i))
 		case "-o":
 			fallthrough
 		case "--out":
-			util.CreateFile(&out, os.Stdout, util.GetArg(args, &i))
+			util.CreateFile(&out, os.Stdout,
+			    util.GetArg(args, &i))
 		default:
 			usageError()
 		}
 	}
 
-	h := DigestAll(in)
+	h, _ := DigestAll(in)
 	if binary {
 		out.Write(h)
 	} else {

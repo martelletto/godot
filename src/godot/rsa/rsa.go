@@ -22,8 +22,8 @@ func createKey(l int) *pkcs1.PrivateKey {
 	var rsa = new(pkcs1.PrivateKey)
 
 	rsa.Version = big.NewInt(0)
-	rsa.Prime1 = rand.Prime(l/2) // prime p
-	rsa.Prime2 = rand.Prime(l/2) // prime q
+	rsa.Prime1, _ = rand.Prime(l/2) // prime p
+	rsa.Prime2, _ = rand.Prime(l/2) // prime q
 	rsa.Modulus = new(big.Int).Mul(rsa.Prime1, rsa.Prime2)
 	rsa.PublicExponent = big.NewInt(65537)
 
@@ -69,7 +69,7 @@ func verify(args []string) {
 		usageError()
 	}
 
-	rsaPub := x509.ReadRSA(key)
+	rsaPub, _ := x509.ReadRSA(key)
 	if len(rsaPub.Modulus.Bytes()) != 512 {
 		fmt.Fprintf(os.Stderr, "invalid key size\n")
 		os.Exit(1)
@@ -85,7 +85,8 @@ func verify(args []string) {
 	s := new(big.Int).SetBytes(sigBody)
 	m := new(big.Int).Exp(s, rsaPub.PublicExponent, rsaPub.Modulus)
 
-	if pss.Verify(in, m.Bytes(), 4095) {
+	ok, _ := pss.Verify(in, m.Bytes(), 4095)
+	if ok {
 		fmt.Fprintf(os.Stdout, "good signature\n")
 		os.Exit(0)
 	} else {
@@ -127,7 +128,7 @@ func sign(args []string) {
 		usageError()
 	}
 
-	rsa := pkcs1.Read(key)
+	rsa, _ := pkcs1.Read(key)
 	if len(rsa.Modulus.Bytes()) != 512 ||
 	   len(rsa.PrivateExponent.Bytes()) != 512 {
 		fmt.Fprintf(os.Stderr, "invalid key size\n")
@@ -135,7 +136,7 @@ func sign(args []string) {
 	}
 
 	// RSA signature generation
-	m := pss.Encode(in, 4095)
+	m, _ := pss.Encode(in, 4095)
 	out.Write(new(big.Int).Exp(m, rsa.PrivateExponent, rsa.Modulus).Bytes())
 
 	util.CloseFile(in)
@@ -162,7 +163,8 @@ func pubkey(args []string) {
 		}
 	}
 
-	x509.WriteRSA(pkcs1.Read(in), out)
+	pkcs1, _ := pkcs1.Read(in)
+	_ = x509.WriteRSA(pkcs1, out)
 	util.CloseFile(in);
 	util.CloseFile(out);
 }
@@ -182,7 +184,7 @@ func newkey(args []string) {
 		}
 	}
 
-	pkcs1.Write(createKey(4096), out)
+	_ = pkcs1.Write(createKey(4096), out)
 	util.CloseFile(out)
 }
 

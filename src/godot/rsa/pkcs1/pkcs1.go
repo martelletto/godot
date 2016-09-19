@@ -10,12 +10,10 @@ package pkcs1
 import (
 	"encoding/asn1"
 	"encoding/pem"
-	"fmt"
-	"godot/util"
+	"errors"
 	"io"
 	"io/ioutil"
 	"math/big"
-	"os"
 )
 
 // As per https://www.ietf.org/rfc/rfc3447.txt, A.1.2
@@ -38,43 +36,38 @@ type PublicKey struct {
 }
 
 // Write() writes a PKCS1 RSA private key in PEM format.
-func Write(rsa *PrivateKey, w io.Writer) {
+func Write(rsa *PrivateKey, w io.Writer) error {
 	var blob = new(pem.Block)
 	var err error
 
 	blob.Type = "RSA PRIVATE KEY"
 	blob.Bytes, err = asn1.Marshal(*rsa)
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "%v\n", err)
-		os.Exit(1)
+		return err
 	}
 
-	util.WritePEM(blob, w)
+	return pem.Encode(w, blob)
 }
 
 // Read() reads a PKCS1 RSA private key in PEM format.
-func Read(r io.Reader) *PrivateKey {
+func Read(r io.Reader) (*PrivateKey, error) {
 	var rsa = new (PrivateKey)
 
 	body, err := ioutil.ReadAll(r)
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "%v\n", err)
-		os.Exit(1)
+		return nil, err
 	}
 	blob, _ := pem.Decode(body)
 	if blob == nil {
-		fmt.Fprintf(os.Stderr, "pem decode error\n")
-		os.Exit(1)
+		return nil, errors.New("pem decode error")
 	}
 	if blob.Type != "RSA PRIVATE KEY" || blob.Bytes == nil {
-		fmt.Fprintf(os.Stderr, "invalid pem\n")
-		os.Exit(1)
+		return nil, errors.New("invalid pem")
 	}
 	_, err = asn1.Unmarshal(blob.Bytes, rsa)
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "%v\n", err)
-		os.Exit(1)
+		return nil, err
 	}
 
-	return rsa
+	return rsa, nil
 }
