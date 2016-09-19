@@ -9,7 +9,7 @@ import (
 	"os"
 )
 
-func usageError() {
+func (k *rsa) UsageError() {
 	fmt.Fprintf(os.Stderr,
 `usage: godot rsa [command] [arguments]
 

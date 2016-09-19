@@ -2,212 +2,99 @@
 // Use of this source code is governed by a BSD-style license
 // that can be found in the LICENSE file.
 //
-// The rsa module implements the core of the RSA algorithm.
+// This file implements the core of the RSA algorithm.
 
 package rsa
 
 import (
-	"fmt"
 	"godot/rand"
 	"godot/rsa/pkcs1"
 	"godot/rsa/pss"
 	"godot/util"
 	"godot/x509"
+	"io"
 	"math/big"
-	"os"
 )
 
-// createKey() creates a new RSA key pair.
-func createKey(l int) *pkcs1.PrivateKey {
-	var rsa = new(pkcs1.PrivateKey)
+type rsa struct {
+	pkcs1 *pkcs1.PrivateKey
+	x509  *pkcs1.PublicKey
+}
 
-	rsa.Version = big.NewInt(0)
-	rsa.Prime1, _ = rand.Prime(l/2) // prime p
-	rsa.Prime2, _ = rand.Prime(l/2) // prime q
-	rsa.Modulus = new(big.Int).Mul(rsa.Prime1, rsa.Prime2)
-	rsa.PublicExponent = big.NewInt(65537)
+func New() *rsa {
+	return new(rsa)
+}
 
-	pMinus := new(big.Int).Sub(rsa.Prime1, big.NewInt(1))
-	qMinus := new(big.Int).Sub(rsa.Prime2, big.NewInt(1))
+// NewKey() creates a new l-bit long private key and writes it to w in
+// PEM format.
+func (k *rsa) NewKey(l int, w io.Writer) error {
+	p, err := rand.Prime(l/2)
+	if err != nil {
+		return err
+	}
+	q, err := rand.Prime(l/2)
+	if err != nil {
+		return err
+	}
+	n := new(big.Int).Mul(p, q)
+	e := big.NewInt(65537)
+	pMinus := new(big.Int).Sub(p, big.NewInt(1))
+	qMinus := new(big.Int).Sub(q, big.NewInt(1))
 	phi := new(big.Int).Mul(pMinus, qMinus)
+	d := new(big.Int).ModInverse(e, phi)
 
-	rsa.PrivateExponent = new(big.Int).ModInverse(rsa.PublicExponent, phi)
-	// CRT auxiliary parameters
-	rsa.Exponent1 = new(big.Int).Mod(rsa.PrivateExponent, pMinus)
-	rsa.Exponent2 = new(big.Int).Mod(rsa.PrivateExponent, qMinus)
-	rsa.Coefficient = new(big.Int).ModInverse(rsa.Prime2, rsa.Prime1)
+	k.pkcs1 = new(pkcs1.PrivateKey)
+	k.pkcs1.Version = big.NewInt(0)
+	k.pkcs1.Prime1 = p
+	k.pkcs1.Prime2 = q
+	k.pkcs1.Modulus = n
+	k.pkcs1.PublicExponent = e
+	k.pkcs1.PrivateExponent = d
+	k.pkcs1.Exponent1 = new(big.Int).Mod(d, pMinus)
+	k.pkcs1.Exponent2 = new(big.Int).Mod(d, qMinus)
+	k.pkcs1.Coefficient = new(big.Int).ModInverse(q, p)
 
-	return rsa
+	return pkcs1.Write(k.pkcs1, w)
 }
 
-// verify() the entry point for the verification of a signature.
-func verify(args []string) {
-	var in  *os.File = os.Stdin
-	var key *os.File = nil
-	var sig *os.File = nil
-
-	for i := 0; i < len(args); i++ {
-		switch args[i] {
-		case "-i":
-			fallthrough
-		case "--in":
-			util.OpenFile(&in, os.Stdin, util.GetArg(args, &i))
-		case "-k":
-			fallthrough
-		case "--key":
-			util.OpenFile(&key, nil, util.GetArg(args, &i))
-		case "-s":
-			fallthrough
-		case "--sig":
-			util.OpenFile(&sig, nil, util.GetArg(args, &i))
-		default:
-			usageError()
-		}
-	}
-
-	if key == nil || sig == nil {
-		usageError()
-	}
-
-	rsaPub, _ := x509.ReadRSA(key)
-	if len(rsaPub.Modulus.Bytes()) != 512 {
-		fmt.Fprintf(os.Stderr, "invalid key size\n")
-		os.Exit(1)
-	}
-
-	sigBody := util.ReadAll(sig)
-	if len(sigBody) != 512 {
-		fmt.Fprintf(os.Stderr, "invalid signature size\n")
-		os.Exit(1)
-	}
-
-	// RSA verification
-	s := new(big.Int).SetBytes(sigBody)
-	m := new(big.Int).Exp(s, rsaPub.PublicExponent, rsaPub.Modulus)
-
-	ok, _ := pss.Verify(in, m.Bytes(), 4095)
-	if ok {
-		fmt.Fprintf(os.Stdout, "good signature\n")
-		os.Exit(0)
-	} else {
-		fmt.Fprintf(os.Stdout, "invalid signature\n")
-		os.Exit(1)
-	}
-
-	util.CloseFile(in)
-	util.CloseFile(key)
-	util.CloseFile(sig)
+// LoadPriv() loads a private key from r.
+func (k *rsa) LoadPriv(r io.Reader) error {
+	var err error
+	k.pkcs1, err = pkcs1.Read(r)
+	return err
 }
 
-// sign() the entry point for the generation of a signature.
-func sign(args []string) {
-	var in  *os.File = os.Stdin
-	var out *os.File = os.Stdout
-	var key *os.File = nil
-
-	for i := 0; i < len(args); i++ {
-		switch args[i] {
-		case "-i":
-			fallthrough
-		case "--in":
-			util.OpenFile(&in, os.Stdin, util.GetArg(args, &i))
-		case "-k":
-			fallthrough
-		case "--key":
-			util.OpenKey(&key, nil, util.GetArg(args, &i))
-		case "-o":
-			fallthrough
-		case "--out":
-			util.CreateFile(&out, os.Stdout, util.GetArg(args, &i))
-		default:
-			usageError()
-		}
-	}
-
-	if key == nil {
-		usageError()
-	}
-
-	rsa, _ := pkcs1.Read(key)
-	if len(rsa.Modulus.Bytes()) != 512 ||
-	   len(rsa.PrivateExponent.Bytes()) != 512 {
-		fmt.Fprintf(os.Stderr, "invalid key size\n")
-		os.Exit(1)
-	}
-
-	// RSA signature generation
-	m, _ := pss.Encode(in, 4095)
-	out.Write(new(big.Int).Exp(m, rsa.PrivateExponent, rsa.Modulus).Bytes())
-
-	util.CloseFile(in)
-	util.CloseFile(out)
+// LoadPub() loads a public key from r.
+func (k *rsa) LoadPub(r io.Reader) error {
+	var err error
+	k.x509, err = x509.ReadRSA(r)
+	return err
 }
 
-// pubkey() is the entry point for the derivation of a public key.
-func pubkey(args []string) {
-	var in  *os.File = os.Stdin
-	var out *os.File = os.Stdout
-
-	for i := 0; i < len(args); i++ {
-		switch args[i] {
-		case "-i":
-			fallthrough
-		case "--in":
-			util.OpenKey(&in, os.Stdin, util.GetArg(args, &i))
-		case "-o":
-			fallthrough
-		case "--out":
-			util.CreateFile(&out, os.Stdout, util.GetArg(args, &i))
-		default:
-			usageError()
-		}
-	}
-
-	pkcs1, _ := pkcs1.Read(in)
-	_ = x509.WriteRSA(pkcs1, out)
-	util.CloseFile(in);
-	util.CloseFile(out);
+// WritePub() writes a public key to w.
+func (k *rsa) WritePub(w io.Writer) error {
+	return x509.WriteRSA(k.pkcs1, w)
 }
 
-// newkey() is the entry point for the generation of a private key.
-func newkey(args []string) {
-	var out *os.File = os.Stdout
-
-	for i := 0; i < len(args); i++ {
-		switch args[i] {
-		case "-o":
-			fallthrough
-		case "--out":
-			util.CreateFile(&out, os.Stdout, util.GetArg(args, &i))
-		default:
-			usageError()
-		}
+// Sign() generates a signature of m and writes it to w.
+func (k *rsa) Sign(m io.Reader, w io.Writer) error {
+	h, err := pss.Encode(m, 4095)
+	if err != nil {
+		return err
 	}
-
-	_ = pkcs1.Write(createKey(4096), out)
-	util.CloseFile(out)
+	d := k.pkcs1.PrivateExponent
+	n := k.pkcs1.Modulus
+	s := new(big.Int).Exp(h, d, n)
+	w.Write(s.Bytes())
+	return nil
 }
 
-// Command() is the entry point for command line operations.
-func Command(args []string) {
-        // args[0] = "rsa"
-        if len(args) < 2 {
-                usageError()
-        }
-
-        // args[1] = new|pub|sign|verify
-        switch args[1] {
-        case "new":
-                newkey(args[2:])
-        case "pub":
-                pubkey(args[2:])
-        case "sign":
-                sign(args[2:])
-        case "verify":
-                verify(args[2:])
-        default:
-                usageError()
-        }
-
-        os.Exit(0)
+// Verify() checks if t is a valid signature of m.
+func (k *rsa) Verify(t, m io.Reader) (bool, error) {
+	body := util.ReadAll(t)
+	e := k.x509.PublicExponent
+	n := k.x509.Modulus
+	s := new(big.Int).SetBytes(body)
+	h := new(big.Int).Exp(s, e, n)
+	return pss.Verify(m, h.Bytes(), 4095)
 }
