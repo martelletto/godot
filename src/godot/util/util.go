@@ -52,7 +52,7 @@ func OpenFile(f **os.File, d *os.File, path string) {
 func OpenKey(f **os.File, d *os.File, path string) {
 	OpenFile(f, d, path);
 
-	s, err := f.Stat()
+	s, err := (*f).Stat()
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "%v\n", err)
 		os.Exit(1)
