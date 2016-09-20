@@ -16,9 +16,9 @@ func (k *ecdsa) UsageError() {
 
 The supported commands are:
 
-godot rsa new [-o <file>]
+godot ecdsa new [-o <file>]
 
-	Creates a new 4096-bit RSA private key. If -o is specified,
+	Creates a new secp256k1 private key. If -o is specified,
 	the key is written to <file> instead of stdout.
 
 godot rsa pub [-i <file>] [-o <file>]
