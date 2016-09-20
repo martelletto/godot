@@ -27,10 +27,10 @@ func (c *Curve) IsInf(p *Point) bool {
 	return p.x == nil && p.y == nil
 }
 
-func (c *Curve) Define(f *Field, a, b *Element) *Curve {
+func (c *Curve) Define(f *Field, a, b int) *Curve {
 	c.f = f
-	c.a = a
-	c.b = b
+	c.a = f.Int64(int64(a))
+	c.b = f.Int64(int64(b))
 	return c
 }
 
@@ -57,6 +57,14 @@ func (p *Point) Set(x, y *Element) *Point {
 	p.x = x
 	p.y = y
 	return p
+}
+
+func (p *Point) GetX() *big.Int {
+	return p.x.v
+}
+
+func (p *Point) GetY() *big.Int {
+	return p.y.v
 }
 
 func (p *Point) SetInf() *Point {

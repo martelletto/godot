@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license
 // that can be found in the LICENSE file.
 //
-// field.go implements field finite field arithmetic primitives.
+// field.go implements finite field arithmetic primitives.
 
 package prime
 
