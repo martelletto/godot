@@ -23,7 +23,7 @@ type OID struct {
 }
 
 // As per https://tools.ietf.org/rfc/rfc3279.txt, 2.3.1
-type RSA_PUBKEY struct {
+type PUBKEY struct {
 	Type		OID
 	Body		asn1.BitString
 }
@@ -32,8 +32,8 @@ type RSA_PUBKEY struct {
 var rsaEncryption asn1.ObjectIdentifier = []int{1, 2, 840, 113549, 1, 1, 1}
 
 // wrap() transforms a PKCS1 private key in a X.509 public key.
-func wrap(rsa *pkcs1.PrivateKey) (*RSA_PUBKEY, error) {
-	var x509 = new(RSA_PUBKEY)
+func wrap(rsa *pkcs1.PrivateKey) (*PUBKEY, error) {
+	var x509 = new(PUBKEY)
 	var rsaPub = new(pkcs1.PublicKey)
 	var err error
 
@@ -50,7 +50,7 @@ func wrap(rsa *pkcs1.PrivateKey) (*RSA_PUBKEY, error) {
 }
 
 // unwrap() transforms a X.509 public key in a PKCS1 public key.
-func unwrap(x509 *RSA_PUBKEY) (*pkcs1.PublicKey, error) {
+func unwrap(x509 *PUBKEY) (*pkcs1.PublicKey, error) {
 	var rsaPub = new(pkcs1.PublicKey)
 
 	if rsaEncryption.Equal(x509.Type.OID) == false ||
@@ -68,9 +68,9 @@ func unwrap(x509 *RSA_PUBKEY) (*pkcs1.PublicKey, error) {
 	return rsaPub, nil
 }
 
-// WriteRSA() transforms a PKCS1 private key in a X.509 public key and
+// Write() transforms a PKCS1 private key in a X.509 public key and
 // writes it on w.
-func WriteRSA(rsa *pkcs1.PrivateKey, w io.Writer) error {
+func Write(rsa *pkcs1.PrivateKey, w io.Writer) error {
 	var blob = new(pem.Block)
 	var err error
 
@@ -87,10 +87,10 @@ func WriteRSA(rsa *pkcs1.PrivateKey, w io.Writer) error {
 	return pem.Encode(w, blob)
 }
 
-// ReadRSA() reads a X.509 public key from r, transforms it in a PKCS1
+// Read() reads a X.509 public key from r, transforms it in a PKCS1
 // public key, and returns it.
-func ReadRSA(r io.Reader) (*pkcs1.PublicKey, error) {
-	var x509 = new(RSA_PUBKEY)
+func Read(r io.Reader) (*pkcs1.PublicKey, error) {
+	var x509 = new(PUBKEY)
 
 	body, err := ioutil.ReadAll(r)
 	if err != nil {

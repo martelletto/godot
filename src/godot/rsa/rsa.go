@@ -10,8 +10,8 @@ import (
 	"godot/rand"
 	"godot/rsa/pkcs1"
 	"godot/rsa/pss"
+	"godot/rsa/x509"
 	"godot/util"
-	"godot/x509"
 	"io"
 	"math/big"
 )
@@ -67,13 +67,13 @@ func (k *rsa) LoadPriv(r io.Reader) error {
 // LoadPub() loads a public key from r.
 func (k *rsa) LoadPub(r io.Reader) error {
 	var err error
-	k.x509, err = x509.ReadRSA(r)
+	k.x509, err = x509.Read(r)
 	return err
 }
 
 // WritePub() writes a public key to w.
 func (k *rsa) WritePub(w io.Writer) error {
-	return x509.WriteRSA(k.pkcs1, w)
+	return x509.Write(k.pkcs1, w)
 }
 
 // Sign() generates a signature of m and writes it to w.
