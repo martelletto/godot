@@ -5,7 +5,7 @@
 package ecdsa
 
 import (
-	"godot/ecdsa/asn1"
+	"godot/ecdsa/sec1"
 	"godot/ecdsa/secp256k1"
 	"io"
 )
@@ -24,7 +24,7 @@ func (k *ecdsa) NewKey(l int, w io.Writer) error {
 	if err != nil {
 		return nil
 	}
-	return asn1.Write(secp256k1.OID, q, d, w)
+	return sec1.Write(secp256k1.OID, q, d, w)
 }
 
 // LoadPriv() loads a private key from r.
