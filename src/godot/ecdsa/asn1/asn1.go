@@ -21,6 +21,8 @@ type PrivateKey struct {
 	PublicKey   asn1.RawValue
 }
 
+// encodePub() encodes a public point as a ASN.1 BIT STRING blob in
+// uncompressed format.
 func encodePub(q *prime.Point) ([]byte, error) {
 	var blob asn1.BitString
 	var x = q.GetX().Bytes()
