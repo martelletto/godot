@@ -6,6 +6,7 @@ package main
 
 import (
 	"fmt"
+	"godot/ecdsa"
 	"godot/rsa"
 	"godot/sha256"
 	"godot/util"
@@ -215,6 +216,8 @@ func main() {
 	}
 
 	switch os.Args[1] {
+	case "ecdsa":
+		sigOp(os.Args[1:], ecdsa.New())
 	case "rsa":
 		sigOp(os.Args[1:], rsa.New())
 	case "sha256":
