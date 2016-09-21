@@ -47,14 +47,14 @@ var baseY = new(big.Int).SetBytes([]byte {
 })
 
 // instantiate a secp256k1 curve
-func getCurve() (*prime.Field, *prime.Curve, *prime.Point) {
+func GetCurve() (*prime.Field, *prime.Curve, *prime.Point) {
 	f := new(prime.Field).SetOrder(fieldOrder)
 	c := new(prime.Curve).Define(f, 0, 7)
 	g := c.NewPoint().Set(f.Element(baseX), f.Element(baseY))
 	return f, c, g
 }
 
-func Keypair() (*prime.Point, *big.Int, error) {
+func NewKeyPair() (*prime.Point, *big.Int, error) {
 	var d *big.Int
 	var err error
 
@@ -69,7 +69,7 @@ func Keypair() (*prime.Point, *big.Int, error) {
 		}
 	}
 
-	_, c, g := getCurve()
+	_, c, g := GetCurve()
 	q := c.NewPoint().Mul(g, d) // the public point
 
 	return q, d, nil
