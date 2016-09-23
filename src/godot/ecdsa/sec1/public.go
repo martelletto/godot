@@ -21,7 +21,7 @@ type Preamble struct {
 
 type PublicKey struct {
 	Preamble
-	Point    asn1.BitString // the public point q
+	Point    asn1.BitString // public point q
 }
 
 // SetBytes() sets the body of the point q of a public key.
@@ -36,7 +36,6 @@ func (ec *PublicKey) SetPoint(x, y *big.Int) (*PublicKey, error) {
 	if len(qX) != len(qY) {
 		return nil, ErrBadPoint
 	}
-
 	p := make([]byte, 0, 1 + len(qX) + len(qY))
 	v := &ec.Point
 	v.Bytes = append(append(append(p, 0x04), qX...), qY...)
@@ -53,7 +52,6 @@ func (ec *PublicKey) GetPoint() (*big.Int, *big.Int, error) {
 	if len(p) < 2 || (len(p) - 1) % 2 != 0 || p[0] != 0x04 {
 		return nil, nil, ErrBadKey
 	}
-
 	i := (len(p) - 1) / 2 + 1 // split p in half
 	x := new(big.Int).SetBytes(p[1:i])
 	y := new(big.Int).SetBytes(p[i:])
