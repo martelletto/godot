@@ -17,7 +17,7 @@ import (
 
 var OID asn1.ObjectIdentifier = []int{1, 3, 132, 0, 10}
 
-// This is the order of the prime field over which secp256k1 is defined:
+// The order of the prime field over which secp256k1 is defined:
 // 2^256 - 2^32 - 2^9 - 2^8 - 2^7 - 2^6 - 2^4 - 1.
 var fieldOrder = new(big.Int).SetBytes([]byte {
 	0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
@@ -50,7 +50,8 @@ var baseY = new(big.Int).SetBytes([]byte {
 	0x9c, 0x47, 0xd0, 0x8f, 0xfb, 0x10, 0xd4, 0xb8,
 })
 
-// instantiate a secp256k1 curve
+// getCurve() instantiates a secp256k1 curve's parameters (field,
+// curve, and base point).
 func getCurve() (*prime.Field, *prime.Curve, *prime.Point) {
 	f := new(prime.Field).SetOrder(fieldOrder)
 	c := new(prime.Curve).Define(f, 0, 7)
@@ -154,9 +155,12 @@ func doSign(h []byte, d *big.Int) (*big.Int, *big.Int, error) {
 	}
 
 	n := baseOrder
-	f := new(prime.Field).SetOrder(n)
 	e := new(big.Int).SetBytes(h)
 	e.Mod(e, n)
+
+	// Use the fact that n is prime to define an ephemeral field
+	// and perform modulo arithmetic.
+	f := new(prime.Field).SetOrder(n)
 	dF := f.Element(d)
 	eF := f.Element(e)
 	kF := f.Element(k)
@@ -192,29 +196,31 @@ func Sign(h []byte, d *big.Int) (*big.Int, *big.Int, error) {
 }
 
 func Verify(qX, qY, r, s *big.Int, h []byte) (*big.Int, error) {
-	n := baseOrder
-
+	var n = baseOrder
 	if r.Cmp(big.NewInt(0)) != 1 || r.Cmp(n) != -1 ||
 	   s.Cmp(big.NewInt(0)) != 1 || s.Cmp(n) != -1 {
 		// r and s must be in the interval [1,n-1].
 		return nil, errors.New("invalid signature")
 	}
 
+	// Use the fact that n is prime to define an ephemeral field
+	// and perform modulo arithmetic.
 	_, c, g := getCurve()
-	e := new(big.Int).SetBytes(h)
 	f := new(prime.Field).SetOrder(n)
 	q := c.NewPoint().Set(f.Element(qX), f.Element(qY))
+	e := new(big.Int).SetBytes(h)
 	sF := f.Element(s)
 	eF := f.Element(e)
 	rF := f.Element(r)
+
+	// The actual signature verification.
 	wF := f.NewElement().Div(f.Int64(1), sF)
 	u1 := f.NewElement().Mul(eF, wF)
 	u2 := f.NewElement().Mul(rF, wF)
-	gu1 := c.NewPoint().Mul(g, u1.GetValue())
-	qu2 := c.NewPoint().Mul(q, u2.GetValue())
-	X := c.NewPoint().Add(gu1, qu2)
-	v := X.GetX()
-	v.Mod(v, n)
+	A := c.NewPoint().Mul(g, u1.GetValue())
+	B := c.NewPoint().Mul(q, u2.GetValue())
+	C := c.NewPoint().Add(A, B)
+	v := C.GetX()
 
-	return v, nil
+	return v.Mod(v, n), nil
 }

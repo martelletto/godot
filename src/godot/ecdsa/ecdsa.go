@@ -38,7 +38,6 @@ func (ec *ecdsa) NewKey(l int, w io.Writer) error {
 		return err
 	}
 	k.SetGenerator(d)
-
 	ec.Private = k
 
 	return k.Write(w)
@@ -57,7 +56,6 @@ func (ec *ecdsa) LoadPriv(r io.Reader) error {
 	if secp256k1.OID.Equal(*id) == false {
 		return errors.New("unsupported curve")
 	}
-
 	ec.Private = k
 
 	return nil
@@ -73,7 +71,6 @@ func (ec *ecdsa) LoadPub(r io.Reader) error {
 	if secp256k1.OID.Equal(*id) == false {
 		return errors.New("unsupported curve")
 	}
-
 	ec.Public = k
 
 	return nil
