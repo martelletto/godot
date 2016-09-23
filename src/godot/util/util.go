@@ -11,9 +11,9 @@ import (
 	"os"
 )
 
-// CreateFile() creates a new, write-only, chmod 0600 file. Its first argument
-// is a pointer f to a *os.File. f needs to be equal to d (a default value for
-// f), or CreateFile() will fail.
+// CreateFile() creates a new, write-only, chmod 0600 file. Its first
+// argument is a pointer f to a *os.File. f needs to be equal to d (a
+// default value for f), or CreateFile() will fail.
 func CreateFile(f **os.File, d *os.File, path string) {
 	var err error
 
@@ -29,9 +29,9 @@ func CreateFile(f **os.File, d *os.File, path string) {
 	}
 }
 
-// OpenFile() is a simple wrapper around os.Open(). Its first argument is a
-// pointer f to a *os.File. f needs to be equal to d (a default value for f),
-// or OpenFile() will fail.
+// OpenFile() is a simple wrapper around os.Open(). Its first argument
+// is a pointer f to a *os.File. f needs to be equal to d (a default
+// value for f), or OpenFile() will fail.
 func OpenFile(f **os.File, d *os.File, path string) {
 	var err error
 
@@ -73,7 +73,8 @@ func CloseFile(f *os.File) {
 	}
 }
 
-// GetArg() retrieves a token from 'args' at index i + 1. The token must exist.
+// GetArg() retrieves a token from 'args' at index i + 1. The token
+// must exist.
 func GetArg(args []string, i *int) string {
 	if *i + 1 >= len(args) {
 		fmt.Fprintf(os.Stderr, "option %s requires an argument",
