@@ -28,14 +28,19 @@ type PrivateKey struct {
 	PublicKey   asn1.RawValue
 }
 
-// Set() sets the generator d of a private key.
-func (ec *PrivateKey) Set(d *big.Int) *PrivateKey {
+type Signature struct {
+	R *big.Int
+	S *big.Int
+}
+
+// SetGenerator() sets the generator d of a private key.
+func (ec *PrivateKey) SetGenerator(d *big.Int) *PrivateKey {
 	ec.PrivateKey = d.Bytes()
 	return ec
 }
 
-// Get() retrieves the generator d of a private key.
-func (ec *PrivateKey) Get() (*big.Int, error) {
+// GetGenerator() retrieves the generator d of a private key.
+func (ec *PrivateKey) GetGenerator() (*big.Int, error) {
 	if ec.PrivateKey == nil {
 		return nil, ErrEmptyKey
 	}
@@ -55,8 +60,8 @@ func (ec *PrivateKey) SetCurve(oid *asn1.ObjectIdentifier) error {
 	return err
 }
 
-// GetCurve() retrieves the curve ID of a private key.
-func (ec *PrivateKey) GetCurve() (*asn1.ObjectIdentifier, error) {
+// GetCurveID() retrieves the curve ID of a private key.
+func (ec *PrivateKey) GetCurveID() (*asn1.ObjectIdentifier, error) {
 	v := &ec.Parameters
 	if v.Class != asn1.ClassContextSpecific ||
 	   v.IsCompound != true ||
@@ -149,4 +154,20 @@ func (ec *PrivateKey) Read(r io.Reader) (*PrivateKey, error) {
 	}
 
 	return ec, nil
+}
+
+func (sig *Signature) Set(r, s *big.Int) *Signature {
+	sig.R = r
+	sig.S = s
+	return sig
+}
+
+func (sig *Signature) Write(w io.Writer) error {
+	p, err := asn1.Marshal(*sig)
+	if err != nil {
+		return err
+	}
+	w.Write(p)
+
+	return nil
 }

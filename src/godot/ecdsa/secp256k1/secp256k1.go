@@ -5,9 +5,13 @@
 package secp256k1
 
 import (
+	"bytes"
 	"encoding/asn1"
+	"encoding/binary"
+	"errors"
 	"godot/ecdsa/prime"
 	"godot/rand"
+	"godot/sha256"
 	"math/big"
 )
 
@@ -47,14 +51,15 @@ var baseY = new(big.Int).SetBytes([]byte {
 })
 
 // instantiate a secp256k1 curve
-func GetCurve() (*prime.Field, *prime.Curve, *prime.Point) {
+func getCurve() (*prime.Field, *prime.Curve, *prime.Point) {
 	f := new(prime.Field).SetOrder(fieldOrder)
 	c := new(prime.Curve).Define(f, 0, 7)
 	g := c.NewPoint().Set(f.Element(baseX), f.Element(baseY))
 	return f, c, g
 }
 
-func NewKeyPair() (*prime.Point, *big.Int, error) {
+// NewPair() returns a new secp256k1 key pair (q,d).
+func NewPair() (*prime.Point, *big.Int, error) {
 	var d *big.Int
 	var err error
 
@@ -69,8 +74,119 @@ func NewKeyPair() (*prime.Point, *big.Int, error) {
 		}
 	}
 
-	_, c, g := GetCurve()
-	q := c.NewPoint().Mul(g, d) // the public point
+	_, c, g := getCurve()
+	q := c.NewPoint().Mul(g, d)
 
 	return q, d, nil
+}
+
+// Given a field order n, a point generator d, and a message m, nonce()
+// returns an integer k in the range [0,n) with a high probability of
+// being unique for a given combination (d, m), and which is difficult
+// to guess without knowledge of d.
+func nonce(n, d *big.Int, m []byte) (*big.Int, error) {
+	kLen := len(n.Bytes()) + 8
+	kBuf := new(bytes.Buffer)
+
+	for i := 0; i < kLen; i += sha256.Len {
+		r, err := rand.Bytes(sha256.Len)
+		if err != nil {
+			return nil, err
+		}
+		// p is the concatenation of i, d, m, and r.
+		p := bytes.NewBuffer(make([]byte, 0, 128))
+		err = binary.Write(p, binary.BigEndian, uint32(i))
+		if err != nil {
+			return nil, err
+		}
+		p.Write(d.Bytes())
+		p.Write(m)
+		p.Write(r)
+		h, err := sha256.DigestBytes(p.Bytes())
+		if err != nil {
+			return nil, err
+		}
+		kBuf.Write(h)
+	}
+
+	k := new(big.Int).SetBytes(kBuf.Bytes()[:kLen])
+
+	return k.Mod(k, n), nil
+}
+
+// randPoint() calculates a random point on the curve, returning the
+// point's x coordinate r and generator k, where k is a nonce.
+func randPoint(h []byte, d *big.Int) (*big.Int, *big.Int, error) {
+	var k *big.Int
+	var n *big.Int = baseOrder
+	var err error
+
+	for {
+		k, err = nonce(n, d, h)
+		if err != nil {
+			return nil, nil, err
+		}
+		if k.Cmp(big.NewInt(0)) != 0 {
+			break
+		}
+	}
+
+	_, c, g := getCurve()
+	Gk := c.NewPoint().Mul(g, k)
+	r := new(big.Int).Mod(Gk.GetX(), n)
+
+	return k, r, nil
+}
+
+func doSign(h []byte, d *big.Int) (*big.Int, *big.Int, error) {
+	var k *big.Int
+	var r *big.Int
+	var err error
+
+	for {
+		k, r, err = randPoint(h, d)
+		if err != nil {
+			return nil, nil, err
+		}
+		if r.Cmp(big.NewInt(0)) != 0 {
+			break
+		}
+	}
+
+	n := baseOrder
+	f := new(prime.Field).SetOrder(n)
+	e := new(big.Int).SetBytes(h)
+	e.Mod(e, n)
+	dF := f.Element(d)
+	eF := f.Element(e)
+	kF := f.Element(k)
+	rF := f.Element(r)
+
+	s := f.NewElement().Mul(dF, rF)
+	s.Add(s, eF)
+	s.Div(s, kF)
+
+	return r, s.GetValue(), nil
+}
+
+func Sign(h []byte, d *big.Int) (*big.Int, *big.Int, error) {
+	var r *big.Int
+	var s *big.Int
+	var err error
+
+	if len(h) != 32 {
+		return nil, nil, errors.New("invalid hash length")
+	}
+
+	for {
+		r, s, err = doSign(h, d)
+		if err != nil {
+			return nil, nil, err
+		}
+		if s.Cmp(big.NewInt(0)) != 0 {
+			break
+		}
+	}
+
+	return r, s, nil
 }

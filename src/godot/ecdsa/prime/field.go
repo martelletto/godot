@@ -8,6 +8,8 @@ package prime
 
 import (
 	"math/big"
+	"fmt"
+	"os"
 )
 
 type Field struct {
@@ -34,6 +36,10 @@ func (f *Field) Element(v *big.Int) *Element {
 
 func (f *Field) NewElement() *Element {
 	return f.Int64(0)
+}
+
+func (e *Element) GetValue() *big.Int {
+	return e.v
 }
 
 func (e *Element) String() string {
@@ -96,9 +102,12 @@ func (e *Element) Inv(a *Element) *Element {
 	var f = a.f
 	// d must be 1, since a.v < f.n and f.n is prime.
 	if d.GCD(x, nil, a.v, f.n).Cmp(big.NewInt(1)) != 0 {
+		fmt.Fprintf(os.Stderr, "d=%d, a.v=%d, f.n=%d\n", d, a.v, f.n)
 		panic("bogus parameters in element inversion")
 	}
+	x.Mod(x, f.n)
 	e.f = f
 	e.v = x
+//	fmt.Fprintf(os.Stderr, "returning %d\n", x)
 	return e
 }
