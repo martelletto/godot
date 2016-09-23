@@ -115,46 +115,27 @@ func (ec *ecdsa) Sign(m io.Reader, w io.Writer) error {
 }
 
 // Verify() checks if t is a valid signature of m.
-func (k *ecdsa) Verify(t, m io.Reader) (bool, error) {
-//	fmt.Println("here?") var foo signature
-//	tb, err := ioutil.ReadAll(t)
-//	if err != nil {
-//		return false, err
-//	}
-//        _, err = asn1.Unmarshal(tb, &foo)
-//	if err != nil {
-//		return false, err
-//	}
-//
-//	f, c, g := secp256k1.GetCurve()
-//
-//	e, _ := sha256.DigestAll(m)
-//	eF := f.Element(new(big.Int).SetBytes(e))
-//	s := f.Element(foo.S)
-//
-//	fmt.Fprintf(os.Stderr, "r=%d\n", foo.R)
-//	fmt.Fprintf(os.Stderr, "s=%d\n", foo.S)
-//
-//	w := f.NewElement().Inv(s)
-//	u1 := f.NewElement().Mul(eF, w)
-//	rF := f.Element(foo.R)
-//	u2 := f.NewElement().Mul(rF, w)
-//
-//	fmt.Fprintf(os.Stderr, "w=%s\n", w)
-//	fmt.Fprintf(os.Stderr, "u1=%s\n", u1)
-//	fmt.Fprintf(os.Stderr, "u2=%s\n", u2)
-//
-//	A := c.NewPoint().Mul(g, u1.GetValue())
-//	qX, qY, err := k.Public.GetPoint()
-//	if err != nil {
-//		return false, err
-//	}
-//	q := c.NewPoint().Set(f.Element(qX), f.Element(qY))
-//	B := c.NewPoint().Mul(q, u2.GetValue())
-//	fmt.Fprintf(os.Stderr, "A=%s\n", A)
-//	fmt.Fprintf(os.Stderr, "B=%s\n", B)
-//	C := c.NewPoint().Add(A, B)
-//	fmt.Fprintf(os.Stderr, "C=%s\n", C)
-//
-	return false, nil
+func (ec *ecdsa) Verify(t, m io.Reader) (bool, error) {
+	k := ec.Public
+	qX, qY, err := k.GetPoint()
+	if err != nil {
+		return false, err
+	}
+	h, err := sha256.DigestAll(m)
+	if err != nil {
+		return false, err
+	}
+	sig, err := new(sec1.Signature).Read(t)
+	if err != nil {
+		return false, err
+	}
+	v, err := secp256k1.Verify(qX, qY, sig.R, sig.S, h)
+	if err != nil {
+		return false, err
+	}
+	if v.Cmp(sig.R) != 0 {
+		return false, nil
+	}
+
+	return true, nil
 }

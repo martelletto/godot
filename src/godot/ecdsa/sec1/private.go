@@ -163,11 +163,24 @@ func (sig *Signature) Set(r, s *big.Int) *Signature {
 }
 
 func (sig *Signature) Write(w io.Writer) error {
-	p, err := asn1.Marshal(*sig)
+	body, err := asn1.Marshal(*sig)
 	if err != nil {
 		return err
 	}
-	w.Write(p)
+	w.Write(body)
 
 	return nil
+}
+
+func (sig *Signature) Read(r io.Reader) (*Signature, error) {
+	body, err := ioutil.ReadAll(r)
+	if err != nil {
+		return nil, err
+	}
+	_, err = asn1.Unmarshal(body, sig)
+	if err != nil {
+		return nil, err
+	}
+
+	return sig, nil
 }

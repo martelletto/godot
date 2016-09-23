@@ -34,7 +34,7 @@ var baseOrder = new(big.Int).SetBytes([]byte {
 	0xbf, 0xd2, 0x5e, 0x8c, 0xd0, 0x36, 0x41, 0x41,
 })
 
-// The X coordinate of the base point G.
+// The x-coordinate of the base point G.
 var baseX = new(big.Int).SetBytes([]byte {
 	0x79, 0xbe, 0x66, 0x7e, 0xf9, 0xdc, 0xbb, 0xac,
 	0x55, 0xa0, 0x62, 0x95, 0xce, 0x87, 0x0b, 0x07,
@@ -42,7 +42,7 @@ var baseX = new(big.Int).SetBytes([]byte {
 	0x59, 0xf2, 0x81, 0x5b, 0x16, 0xf8, 0x17, 0x98,
 })
 
-// The Y coordinate of the base point G.
+// The y-coordinate of the base point G.
 var baseY = new(big.Int).SetBytes([]byte {
 	0x48, 0x3a, 0xda, 0x77, 0x26, 0xa3, 0xc4, 0x65,
 	0x5d, 0xa4, 0xfb, 0xfc, 0x0e, 0x11, 0x08, 0xa8,
@@ -115,7 +115,7 @@ func nonce(n, d *big.Int, m []byte) (*big.Int, error) {
 }
 
 // randPoint() calculates a random point on the curve, returning the
-// point's x coordinate r and generator k, where k is a nonce.
+// point's x-coordinate r and generator k, where k is a nonce.
 func randPoint(h []byte, d *big.Int) (*big.Int, *big.Int, error) {
 	var k *big.Int
 	var n *big.Int = baseOrder
@@ -189,4 +189,32 @@ func Sign(h []byte, d *big.Int) (*big.Int, *big.Int, error) {
 	}
 
 	return r, s, nil
+}
+
+func Verify(qX, qY, r, s *big.Int, h []byte) (*big.Int, error) {
+	n := baseOrder
+
+	if r.Cmp(big.NewInt(0)) != 1 || r.Cmp(n) != -1 ||
+	   s.Cmp(big.NewInt(0)) != 1 || s.Cmp(n) != -1 {
+		// r and s must be in the interval [1,n-1].
+		return nil, errors.New("invalid signature")
+	}
+
+	_, c, g := getCurve()
+	e := new(big.Int).SetBytes(h)
+	f := new(prime.Field).SetOrder(n)
+	q := c.NewPoint().Set(f.Element(qX), f.Element(qY))
+	sF := f.Element(s)
+	eF := f.Element(e)
+	rF := f.Element(r)
+	wF := f.NewElement().Div(f.Int64(1), sF)
+	u1 := f.NewElement().Mul(eF, wF)
+	u2 := f.NewElement().Mul(rF, wF)
+	gu1 := c.NewPoint().Mul(g, u1.GetValue())
+	qu2 := c.NewPoint().Mul(q, u2.GetValue())
+	X := c.NewPoint().Add(gu1, qu2)
+	v := X.GetX()
+	v.Mod(v, n)
+
+	return v, nil
 }
