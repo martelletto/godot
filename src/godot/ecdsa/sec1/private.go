@@ -69,7 +69,6 @@ func (ec *PrivateKey) GetCurveID() (*asn1.ObjectIdentifier, error) {
 	   v.Bytes == nil {
 		return nil, ErrBadKey
 	}
-
 	oid := new(asn1.ObjectIdentifier)
 	_, err := asn1.Unmarshal(v.Bytes, oid)
 	if err != nil {
@@ -85,7 +84,6 @@ func (ec *PrivateKey) SetPoint(x, y *big.Int) error {
 	if err != nil {
 		return err
 	}
-
 	v := &ec.PublicKey
 	v.Class = asn1.ClassContextSpecific
 	v.IsCompound = true // constructed
@@ -106,7 +104,6 @@ func (ec *PrivateKey) GetPoint() (*big.Int, *big.Int, error) {
 	   v.Bytes == nil {
 		return nil, nil, ErrBadKey
 	}
-
 	b := new(asn1.BitString)
 	_, err := asn1.Unmarshal(v.Bytes, b)
 	if err != nil {
