@@ -2,14 +2,12 @@
 // Use of this source code is governed by a BSD-style license
 // that can be found in the LICENSE file.
 //
-// field.go implements finite field arithmetic primitives.
+// field.go implements modulo arithmetic over prime fields.
 
 package prime
 
 import (
 	"math/big"
-	"fmt"
-	"os"
 )
 
 type Field struct {
@@ -56,6 +54,7 @@ func (e *Element) SetValue(v *big.Int) *Element {
 		panic("integer out of field range")
 	}
 	e.v = v
+
 	return e
 }
 
@@ -94,20 +93,20 @@ func (e *Element) Cmp(x *Element) int {
 	return e.v.Cmp(x.v)
 }
 
-// Inv() uses Go's GCD() to compute the inverse 'x' of an element 'a' on
-// a prime field of order 'n', i.e x such that (a*x)modn = 1.
+// Inv() uses Go's GCD() to compute the inverse x of an element a on
+// a prime field of order n, i.e x such that (a*x)modn = 1.
 func (e *Element) Inv(a *Element) *Element {
 	var d = new(big.Int)
 	var x = new(big.Int)
 	var f = a.f
+
 	// d must be 1, since a.v < f.n and f.n is prime.
 	if d.GCD(x, nil, a.v, f.n).Cmp(big.NewInt(1)) != 0 {
-		fmt.Fprintf(os.Stderr, "d=%d, a.v=%d, f.n=%d\n", d, a.v, f.n)
 		panic("bogus parameters in element inversion")
 	}
-	x.Mod(x, f.n)
+
 	e.f = f
-	e.v = x
-//	fmt.Fprintf(os.Stderr, "returning %d\n", x)
+	e.v = x.Mod(x, f.n)
+
 	return e
 }
