@@ -52,7 +52,7 @@ func (ec *ecdsa) LoadPriv(r io.Reader) error {
 	}
 	id, err := k.GetCurveID()
 	if err != nil {
-		return nil
+		return err
 	}
 	if secp256k1.OID.Equal(*id) == false {
 		return errors.New("unsupported curve")
@@ -64,17 +64,18 @@ func (ec *ecdsa) LoadPriv(r io.Reader) error {
 }
 
 // LoadPub() loads a public key from r.
-func (k *ecdsa) LoadPub(r io.Reader) error {
-//	fmt.Println("here 1?")
-//	ec := &k.Public
-//	_, err := ec.Read(r)
-//	if err != nil {
-//		return err
-//	}
-//	oid := ec.GetCurve()
-//	if secp256k1.OID.Equal(*oid) == false {
-//		return errors.New("unsupported curve")
-//	}
+func (ec *ecdsa) LoadPub(r io.Reader) error {
+	k, err := new(sec1.PublicKey).Read(r)
+	if err != nil {
+		return err
+	}
+	id := k.GetCurveID()
+	if secp256k1.OID.Equal(*id) == false {
+		return errors.New("unsupported curve")
+	}
+
+	ec.Public = k
+
 	return nil
 }
 

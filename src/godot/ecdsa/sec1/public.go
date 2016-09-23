@@ -67,8 +67,8 @@ func (ec *PublicKey) SetCurve(oid *asn1.ObjectIdentifier) *PublicKey {
 	return ec
 }
 
-// GetCurve() retrieves the curve ID of a public key.
-func (ec *PublicKey) GetCurve() *asn1.ObjectIdentifier {
+// GetCurveID() retrieves the curve ID of a public key.
+func (ec *PublicKey) GetCurveID() *asn1.ObjectIdentifier {
 	return &ec.CurveID
 }
 
