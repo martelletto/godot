@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license
 // that can be found in the LICENSE file.
 //
-// curve.go implements elliptic curve arithmetic primitives.
+// curve.go elliptic curve arithmetic over prime curves.
 
 package prime
 
@@ -56,6 +56,7 @@ func (p *Point) Set(x, y *Element) *Point {
 	}
 	p.x = x
 	p.y = y
+
 	return p
 }
 
@@ -102,9 +103,9 @@ func (p *Point) String() string {
 	}
 }
 
-// The three algorithms below (point doubling, addition and multiplication)
-// follow the definitions given in Guide to Elliptic Curve Cryptogaphy by
-// Hankerson, Menezes & Vanstone, first edition.
+// The three algorithms below (point doubling, addition and
+// multiplication) follow the definitions given in Guide to Elliptic
+// Curve Cryptogaphy by Hankerson, Menezes & Vanstone, first edition.
 
 // Section 3.1.2
 func (p *Point) Double(t *Point) *Point {
