@@ -34,6 +34,7 @@ Usage:
 
 The commands are:
 
+    ecdsa	perform secp256k1 ECDSA operations
     rsa		perform 4096-bit RSA operations
     sha256	calculate a SHA-256 digest
     version	print godot's version number
