@@ -35,4 +35,4 @@ godot refuses to work with private keys if they are not mode 600.
 - godot ecdsa verify -k pubkey.pem -s signature.bin -i file
 
 godot started as an otherwise uncompromising exercise by the author
-to master the Go language. Use it at your own risk.
+to learn Go. Use it at your own risk.
