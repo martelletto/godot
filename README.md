@@ -3,7 +3,7 @@
 ## Disclaimer
 godot started as an otherwise uncompromising exercise by the author
 to learn Go. As it stands, the code provides no defense against
-side-channel attacks and is the definition of bad crypto. **Do not even
+side-channel attacks and is therefore bad crypto. **Do not even
 think about using it for anything remotely serious.**
 
 godot is a tool for generating and verifying digital signatures, with a
