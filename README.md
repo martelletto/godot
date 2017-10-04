@@ -7,8 +7,7 @@ side-channel attacks. **Do not even think about using it for anything
 remotely serious.**
 
 ## Description
-godot is a tool for generating and verifying digital signatures, with a
-focus on simplicity and the adoption of best practices.
+godot is a tool to generate and verify digital signatures.
 
 As it stands, 4096-bit RSA probabilistic signatures (PSS) and secp256k1
 ECDSA signatures are supported. The digest mechanism used is SHA-256.
