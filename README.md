@@ -11,7 +11,7 @@ focus on simplicity and the adoption of best practices.
 
 As it stands, 4096-bit RSA probabilistic signatures (PSS) and secp256k1
 ECDSA signatures are supported. The digest mechanism used is SHA-256.
-For RSA, the PSS salt length is taken to be same size as a SHA-256
+For RSA, the PSS salt length is taken to be the same size as a SHA-256
 digest. Except where otherwise noted, the following pairs of commands
 are understood to be equivalent in functionality:
 
