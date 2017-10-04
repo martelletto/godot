@@ -6,6 +6,7 @@ to learn Go. As it stands, the code provides no defense against
 side-channel attacks. **Do not even think about using it for anything
 remotely serious.**
 
+## Description
 godot is a tool for generating and verifying digital signatures, with a
 focus on simplicity and the adoption of best practices.
 
