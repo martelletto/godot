@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license
 // that can be found in the LICENSE file.
 //
-// curve.go elliptic curve arithmetic over prime curves.
+// curve.go implements elliptic curve arithmetic over prime
+// fields.
 
 package prime
 
